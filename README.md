@@ -18,9 +18,9 @@ Ideal for documentation, presentations, and technical reviews
 > Flowcharts are authored in a separate VS Code project, then manually imported here.
 
 ## Viewing Mermaid Charts in VS Code
-1. Install one of the following extensions:
-   - **Markdown Preview Mermaid Support**
-   - **Mermaid Editor**
+1. Install following extensions in vscode plugins (ctrl + shift + x):
+   - **mermaidchart.vscode-mermaid-chart**
+   - **vstirbu.vscode-mermaid-preview**
 2. Open any `.mmd` file and:
    - Use the extension’s preview command (e.g., `Markdown: Open Preview to the Side`)
    - Or insert Mermaid blocks in Markdown and preview them.
