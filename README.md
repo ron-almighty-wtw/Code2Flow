@@ -1,2 +1,51 @@
+
 # Code2Flow
-This repository serves as a visual reference for developers, architects, and stakeholders, making it easier to analyze workflows, debug processes, and maintain codebases efficiently.
+
+**Code2Flow** is a centralized repository for visual documentation across projects, using Mermaid (`.mmd`) flowcharts. It helps developers and stakeholders quickly understand code logic, workflows, and system behavior.
+
+## What this repo contains
+- Organized Mermaid flowcharts (.mmd) grouped by project and module
+- Templates and conventions for consistent diagram authoring
+- Optional exports (PNG/SVG) for presentations and wiki pages
+
+> Flowcharts are authored in a separate VS Code project, then manually imported here.
+
+## Viewing Mermaid Charts in VS Code
+1. Install one of the following extensions:
+   - **Markdown Preview Mermaid Support**
+   - **Mermaid Editor**
+2. Open any `.mmd` file and:
+   - Use the extension’s preview command (e.g., `Markdown: Open Preview to the Side`)
+   - Or insert Mermaid blocks in Markdown and preview them.
+
+## Folder Structure
+```
+projects/<project-name>/flows/<module>/<scope_feature_version>.mmd
+```
+- **project-name**: kebab-case (e.g., `billing-service`)
+- **module**: group related flows (e.g., `auth`, `pipeline`, `orders`)
+- **scope_feature_version**: e.g., `auth_login_v1.mmd`
+
+## Conventions
+Each `.mmd` should start with metadata:
+```mermaid
+%% title: Login Flow
+%% author: Ronald Jose
+%% last-updated: 2025-12-16
+%% description: User login path with validation and error branches.
+```
+
+Style guidelines (see `docs/conventions.md`):
+- Use `flowchart TD` (top-down) for process flows unless left-right improves readability.
+- Keep node labels concise; prefer verbs for actions and nouns for states.
+- Color or style only for emphasis; avoid excessive decoration.
+
+## Contributing
+See `CONTRIBUTING.md` for:
+- Naming rules
+- Review checklist
+- Diagram validation steps
+- PR workflow
+
+## License
+MIT (or change to your preferred license)

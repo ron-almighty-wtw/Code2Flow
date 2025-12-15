@@ -1,0 +1,65 @@
+
+name: Validate Mermaid diagrams
+
+on:
+  pull_request:
+    paths:
+      - '**/*.mmd'
+  workflow_dispatch:
+
+jobs:
+  mermaid-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Mermaid CLI
+        run: |
+          npm i -g @mermaid-js/mermaid-cli
+
+      - name: Find .mmd files
+        id: find_files
+        shell: bash
+        run: |
+          mapfile -t files < <(git ls-files '*.mmd')
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No .mmd files found."
+            echo "files=" >> $GITHUB_OUTPUT
+          else
+            printf '%s
+' "${files[@]}"
+            printf 'files<<EOF
+%s
+EOF
+' "$(printf '%s
+' "${files[@]}")" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate by rendering to SVG
+        if: steps.find_files.outputs.files != ''
+        shell: bash
+        run: |
+          mkdir -p .mermaid-validation-out
+          status=0
+          while IFS= read -r f; do
+            echo "Rendering $f..."
+            mmdc -i "$f" -o ".mermaid-validation-out/$(basename "${f%.*}").svg" || status=1
+          done <<< "${{ steps.find_files.outputs.files }}"
+          if [ $status -ne 0 ]; then
+            echo "One or more Mermaid files failed to render."
+            exit 1
+          fi
+
+      - name: Upload rendered SVGs (artifact)
+        if: steps.find_files.outputs.files != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: mermaid-rendered-svgs
+          path: .mermaid-validation-out

@@ -1,0 +1,18 @@
+
+%% title: <Replace with Diagram Title>
+%% author: Ronald Jose
+%% last-updated: 2025-12-16
+%% description: <Short description of the flow>
+
+flowchart TD
+    %% Style notes:
+    %% - Use concise action verbs.
+    %% - Keep edges labeled where branches occur.
+    %% - Consider subgraphs for grouping.
+
+    A([Start]) --> B[Validate Input]
+    B -->|Valid| C[Process Request]
+    B -->|Invalid| D{Error Type?}
+    D -->|Client| E[Show Validation Errors]
+    D -->|Server| F[Retry or Fail]
+    C --> G([End])

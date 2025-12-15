@@ -1,0 +1,15 @@
+
+%% title: Login Flow
+%% author: Ronald Jose
+%% last-updated: 2025-12-16
+%% description: User login with validation and error handling.
+
+flowchart TD
+    START([Open Login Page]) --> VALIDATE[Validate Credentials]
+    VALIDATE -->|Valid| AUTH{MFA Required?}
+    VALIDATE -->|Invalid| ERR[Show Error Message]
+    AUTH -->|Yes| MFA[Send OTP / Prompt MFA]
+    AUTH -->|No| SESSION[Create Session]
+    MFA -->|Success| SESSION
+    MFA -->|Fail| ERR
+    SESSION --> DASH([Redirect to Dashboard])

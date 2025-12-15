@@ -1,0 +1,13 @@
+
+%% title: Data Pipeline
+%% author: Ronald Jose
+%% last-updated: 2025-12-16
+%% description: ETL pipeline from source to warehouse with quality checks.
+
+flowchart TD
+    SRC[(Source)] --> EXTRACT[Extract]
+    EXTRACT --> TRANSFORM[Transform]
+    TRANSFORM --> QC{Pass Quality Checks?}
+    QC -->|Yes| LOAD[Load to Warehouse]
+    QC -->|No| ALERT[Notify & Quarantine]
+    LOAD --> REPORTS([Make Data Available])
