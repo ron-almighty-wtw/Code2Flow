@@ -1,7 +1,14 @@
 
 # Code2Flow
 
-**Code2Flow** is a centralized repository for visual documentation across projects, using Mermaid (`.mmd`) flowcharts. It helps developers and stakeholders quickly understand code logic, workflows, and system behavior.
+**Code2Flow** is a centralized repository for visual documentation across projects, using Mermaid (`.mmd`) flowcharts. It transforms complex code logic into clear, easy-to-understand flowcharts, enabling faster comprehension and streamlined collaboration.
+This repository serves as a visual reference for developers, architects, and stakeholders, making it easier to analyze workflows, debug processes, and maintain codebases efficiently.
+
+Key Features:
+Organized flowcharts for multiple projects
+Visual representation of algorithms, workflows, and system logic
+Improves readability and accelerates onboarding for new developers
+Ideal for documentation, presentations, and technical reviews
 
 ## What this repo contains
 - Organized Mermaid flowcharts (.mmd) grouped by project and module
