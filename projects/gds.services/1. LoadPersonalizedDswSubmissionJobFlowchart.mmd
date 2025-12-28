@@ -1,0 +1,98 @@
+flowchart LR
+
+    Start(["Start: ProcessAsync(queueId)"]):::startend
+    parFetch0Start(( )):::action
+    parCountry(( )):::action
+    parFetch0End(( )):::action
+
+    DataLoaderService_GetQueue["DataLoaderService: Get LoadSubmissionQueue"]:::dataloader
+    ParticipationService_GetUser["ParticipationService: Get submission user details"]:::participation
+    DataLoaderService_GetUploadedDsw["DataLoaderService: Get uploaded DSW"]:::dataloader
+    ParticipationService_GetTemplate["ParticipationService: Get personalized DSW template"]:::participation
+    ParticipationService_GetPersonalizedDsw["ParticipationService: Get personalized DSW by Id"]:::participation
+    ParticipationService_GetCompany["ParticipationService: Get company by participationId"]:::participation
+    SurveySetupService_GetVersion["SurveySetupService: Get version from participationId"]:::survey
+    DataLoaderService_UpsertQueue["DataLoaderService: Upsert LoadSubmissionQueue"]:::dataloader
+    DswStagingWorkflowService_MapWorksheets["DswStagingWorkflowService: Map version worksheets and elements"]:::dsw
+    SurveySetupService_GetCountries["SurveySetupService: Get survey setup countries"]:::survey
+    DswStagingWorkflowService_GetWorkbookCountries["DswStagingWorkflowService: Get workbook country codes"]:::dsw
+    DswStagingWorkflowService_StageWorkbook["DswStagingWorkflowService: Stage workbook for contact data"]:::dsw
+    DataLoaderService_AutoPopulate["DataLoaderService: Auto-populate company plan"]:::dataloader
+    DataLoaderService_AddQueueValidation["DataLoaderService: Add queue validation"]:::dataloader
+    DataLoaderService_UpsertQueueDetail["DataLoaderService: Upsert LoadSubmissionQueueDetail"]:::dataloader
+    PersonalizedInvalidExcessManager_CreateParticipations["PersonalizedInvalidExcessManager: Create participations for invalid/excess countries"]:::invalidexcess
+
+    LoadSubmissionJobManager_EnqueuePersonalizedParticipationProcessing["LoadSubmissionJobManager: EnqueuePersonalizedParticipationProcessing (per country ILoadPersonalizedCountrySubmissionJob)"]:::loadsubmission
+    LoadSubmissionJobManager_UpdateRVQJob["LoadSubmissionJobManager: UpdateRVQ (CVQ files for loaded participations)"]:::loadsubmission
+    SignalRService_NotifySignalR["SignalRService: Send SignalR notification"]:::signalr
+    GenerateEmailJobManager_EnqueueEmail["GenerateEmailJobManager: Enqueue email job"]:::email
+    ExceptionHandling_FailAll["ExceptionHandling: Fail all participations"]:::exception
+ 
+
+    End(["End"]):::startend
+
+    %% Exception handling
+    Start -. Any Exception .-> ExceptionHandling_FailAll
+    ExceptionHandling_FailAll --> GenerateEmailJobManager_EnqueueEmail
+
+    %% Parallel fetches at start
+    Start --> parFetch0Start
+    parFetch0Start --> DataLoaderService_GetQueue
+    parFetch0Start --> ParticipationService_GetUser
+    parFetch0Start --> DataLoaderService_GetUploadedDsw
+    parFetch0Start --> ParticipationService_GetTemplate
+    parFetch0Start --> ParticipationService_GetPersonalizedDsw
+
+    DataLoaderService_GetQueue --> parFetch0End
+    ParticipationService_GetUser --> parFetch0End
+    DataLoaderService_GetUploadedDsw --> parFetch0End
+    ParticipationService_GetTemplate --> parFetch0End
+    ParticipationService_GetPersonalizedDsw --> parFetch0End
+
+    parFetch0End --> ParticipationService_GetCompany
+    parFetch0End --> SurveySetupService_GetVersion
+    ParticipationService_GetCompany --> DataLoaderService_UpsertQueue
+    SurveySetupService_GetVersion --> DataLoaderService_UpsertQueue
+    
+
+
+    DataLoaderService_UpsertQueue --> DswStagingWorkflowService_MapWorksheets
+    DswStagingWorkflowService_MapWorksheets --> SurveySetupService_GetCountries
+ 
+
+    SurveySetupService_GetCountries --> DswStagingWorkflowService_GetWorkbookCountries
+    DswStagingWorkflowService_GetWorkbookCountries --> DswStagingWorkflowService_StageWorkbook
+    DswStagingWorkflowService_StageWorkbook --> DataLoaderService_AutoPopulate
+
+    DataLoaderService_AutoPopulate --> SubmissionIssues{Submission level issues?}:::decision
+    SubmissionIssues -- Yes --> DataLoaderService_AddQueueValidation
+    DataLoaderService_AddQueueValidation --> InvalidExcess{Has invalid or excess countries?}:::decision
+    SubmissionIssues -- No --> InvalidExcess{Has invalid or excess countries?}:::decision
+
+    InvalidExcess{Has invalid or excess countries?}:::decision
+    InvalidExcess -- Yes  --> DataLoaderService_UpsertQueueDetail --> PersonalizedInvalidExcessManager_CreateParticipations
+    PersonalizedInvalidExcessManager_CreateParticipations --> GenerateEmailJobManager_EnqueueEmail
+    GenerateEmailJobManager_EnqueueEmail --> End
+
+    InvalidExcess -- No --> DataLoaderService_UpsertQueueDetail --> ForEachParticipation["For each participation/country"]:::loop
+    ForEachParticipation --> parCountry
+    parCountry --> LoadSubmissionJobManager_EnqueuePersonalizedParticipationProcessing
+    %% All per-country jobs complete, then continue
+    ForEachParticipation --> LoadSubmissionJobManager_UpdateRVQJob
+    LoadSubmissionJobManager_UpdateRVQJob --> SignalRService_NotifySignalR
+    SignalRService_NotifySignalR --> GenerateEmailJobManager_EnqueueEmail
+    GenerateEmailJobManager_EnqueueEmail --> End
+
+    classDef dataloader fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#111;
+    classDef participation fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#111;
+    classDef survey fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#111;
+    classDef dsw fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#111;
+    classDef invalidexcess fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#111;
+    classDef signalr fill:#e0f7fa,stroke:#00838f,stroke-width:2px,color:#111;
+    classDef loadsubmission fill:#f9fbe7,stroke:#afb42b,stroke-width:2px,color:#111;
+    classDef countryjob fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px,color:#111;
+    classDef email fill:#fce4ec,stroke:#ad1457,stroke-width:2px,color:#111;
+    classDef exception fill:#fbe9e7,stroke:#d84315,stroke-width:2px,color:#111;
+    classDef decision fill:#fffde7,stroke:#fbc02d,stroke-width:3px,color:#111;
+    classDef startend fill:#b2dfdb,stroke:#00695c,stroke-width:3px,color:#111;
+    classDef loop fill:#ffe082,stroke:#fbc02d,stroke-width:2px,color:#111;

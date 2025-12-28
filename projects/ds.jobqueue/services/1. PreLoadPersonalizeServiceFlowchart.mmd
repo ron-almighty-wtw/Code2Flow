@@ -1,0 +1,52 @@
+flowchart LR
+    %% Nodes
+    Start(["Start"]):::start
+    InitState["Create PreLoadProcessingPersonalizedState"]:::action
+    RunSteps["PreLoadPersonalizeStepsProcessor: RunStepsAsync(state)\n(Note: Each step updates state)"]:::service
+    ShouldCreateMakeDisc{state.ShouldCreateMakeDiscRequest?}:::decision
+    CreateMakeDiscReq["PreLoadPersonalizeStepsProcessor: CreateBackwardsCompatibilityRequestAsync(state)"]:::service
+    InitMakeDiscState["Create PreLoadProcessingMakeDiscState"]:::action
+    RunMakeDiscSteps["PreLoadMakeDiscStepsProcessor: RunStepsAsync(makeDiscState)\n(Note: Each step updates state)"]:::service
+    SetProcessFlag["Set makeDiscState.Result.ProcessUsingMakeDiscVersion = true"]:::action
+    SetParticipationId["Set makeDiscState.Result.ParticipationId = makeDiscRequest.ParticipationId"]:::action
+    ReturnMakeDiscResult["Return makeDiscState.Result"]:::endnode
+    End(["End"]):::endfinal
+    CatchBlock["Catch Exception"]:::exception
+    LogError["Logger: LogError"]:::logger
+    SetErrorType["state.Result.CodeType = Error\nstate.Result.ErrorCode = PreloadFailed"]:::manual
+    LogInfo["Logger: LogInformation (Elapsed, QueueId, CodeType, ErrorCodeDesc)"]:::logger
+    ReturnStateResult["Return state.Result"]:::endnode
+    Elapsed["Calculate elapsed time"]:::action
+
+    %% Main flow
+    Start --> InitState --> RunSteps --> ShouldCreateMakeDisc
+    ShouldCreateMakeDisc -- Yes (process using makedisk)--> CreateMakeDiscReq --> InitMakeDiscState --> RunMakeDiscSteps --> SetProcessFlag --> SetParticipationId --> ReturnMakeDiscResult --> End
+    ShouldCreateMakeDisc -- No --> Elapsed
+    RunSteps -.->|Exception| CatchBlock
+    RunMakeDiscSteps -.->|Exception| CatchBlock
+
+    %% Exception flow
+    CatchBlock -.-> LogError -.-> SetErrorType -.-> Elapsed
+
+    %% After steps or exception
+    Elapsed --> LogInfo --> ReturnStateResult --> End
+
+    %% Styling (readable text)
+    classDef start fill:#e3f6fc,stroke:#007acc,stroke-width:2px,color:#00334d,font-weight:bold;
+    classDef endnode fill:#d4f8e8,stroke:#009966,stroke-width:2px,color:#003d26,font-weight:bold;
+    classDef endfinal fill:#b3ffcc,stroke:#009966,stroke-width:3px,color:#003d26,font-weight:bold;
+    classDef action fill:#fffbe6,stroke:#ffb300,stroke-width:2px,color:#665200;
+    classDef service fill:#ffe0e6,stroke:#e75480,stroke-width:2px,color:#7a2941;
+    classDef decision fill:#fff6d6,stroke:#b7950b,stroke-width:2px,color:#665200;
+    classDef exception fill:#f8d7da,stroke:#d9534f,stroke-width:2px,stroke-dasharray: 5 5,color:#7a2323;
+    classDef logger fill:#d1ecf1,stroke:#0c5460,stroke-width:2px,stroke-dasharray: 5 5,color:#00333a;
+    classDef manual fill:#fbeee6,stroke:#e67e22,stroke-width:2px,stroke-dasharray: 5 5,color:#7a4a0a;
+    class Start start;
+    class ReturnMakeDiscResult,ReturnStateResult endnode;
+    class End endfinal;
+    class InitState,InitMakeDiscState,SetProcessFlag,SetParticipationId,Elapsed action;
+    class RunSteps,CreateMakeDiscReq,RunMakeDiscSteps service;
+    class ShouldCreateMakeDisc decision;
+    class CatchBlock exception;
+    class LogError,LogInfo logger;
+    class SetErrorType manual;

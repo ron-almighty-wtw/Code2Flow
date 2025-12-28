@@ -1,0 +1,91 @@
+flowchart LR
+
+    Start(["Start: EnqueuePersonalizedParticipationProcessing"]):::startend
+    parFetch0(( )):::action
+    parActions(( )):::action
+    parFetch1(( )):::action
+    End(["End"]):::startend
+
+    Start --> parFetch0
+    parFetch0 --> SetValidationCode["Set validationCode based on versionDetails"]:::action
+    parFetch0 --> SetMappedVersionNames["Deserialize mappedVersionNames"]:::action
+
+    SetValidationCode --> CheckLoadId{"Is processInfo.LoadId == 0?"}:::decision
+    SetMappedVersionNames --> CheckLoadId
+
+    CheckLoadId -- Yes --> parActions
+    CheckLoadId -- No --> CheckValidationCode{"Is validationCode empty?"}:::decision
+
+    parActions --> ParticipationService_GetUser["ParticipationService: Get User by Id"]:::participation
+    parActions --> CreateManageParticipationDTO["Create ManageParticipationBaseDTO"]:::action
+    parActions --> DataCollectionService_GetParticipationUser["DataCollectionService: Get Participation User"]:::datacollection
+
+    ParticipationService_GetUser --> parFetch1
+    CreateManageParticipationDTO --> parFetch1
+    DataCollectionService_GetParticipationUser --> parFetch1
+
+    parFetch1 -->  AwaitManageParticipation["Await ManageParticipation"]:::pm
+    parFetch1 --> AddOrUpdateParticipationWorkbook["ParticipationService: AddOrUpdateParticipationWorkbookAsync"]:::participation
+    AwaitManageParticipation --> CheckValidationCode
+    AddOrUpdateParticipationWorkbook --> CheckValidationCode
+
+    CheckValidationCode -- Yes --> UpsertLoadSubmissionQueueParticipation["DataLoaderService: UpsertLoadSubmissionQueueParticipationAsync"]:::dataloader
+    UpsertLoadSubmissionQueueParticipation --> SetProcessInfoLoadId["Set processInfo.LoadId"]:::action
+    SetProcessInfoLoadId --> CheckIsXLProcess{"Is isXLProcess true?"}:::decision
+    CheckIsXLProcess -- Yes --> EnqueueXLJob["Enqueue ILoadPersonalizedCountrySubmissionJob.ProcessXLAsync"]:::action
+    CheckIsXLProcess -- No --> EnqueueNormalJob["Enqueue ILoadPersonalizedCountrySubmissionJob.ProcessAsync"]:::action
+    EnqueueXLJob --> End
+    EnqueueNormalJob --> End
+
+    CheckValidationCode -- No --> ValidationCodeHasLargeIncumbent{"ValidationCode Has Large Incumbent?"}:::decision
+    ValidationCodeHasLargeIncumbent -- Yes --> GetValidationLookup["DataLoaderService: GetValidationLookupAsync (HasLargeMegaIncumbents)"]:::dataloader
+    GetValidationLookup --> FormatValidationMessage["Format Validation Message with Size/Threshold"]:::action
+    FormatValidationMessage --> CreateParticipationRequest["Create LoadSubmissionParticipationDTO (with formatted message)"]:::action
+    CreateParticipationRequest --> CheckIfLoadIdZero{"Is processInfo.LoadId == 0?"}:::decision
+    ValidationCodeHasLargeIncumbent -- No --> GenerateValidationDetail["Generate Validation Detail"]:::action
+    GenerateValidationDetail --> CreateParticipationRequestNoLarge["Create LoadSubmissionParticipationDTO"]:::action
+    CreateParticipationRequestNoLarge --> CheckIfLoadIdZero
+    CheckIfLoadIdZero -- Yes --> AddLoadSubmissionParticipation["Add LoadSubmissionParticipation"]:::lsqpm
+    CheckIfLoadIdZero -- No --> UpdateParticipation["Update Participation"]:::lsqpm
+
+
+    AddLoadSubmissionParticipation --> End
+    UpdateParticipation --> End
+
+    %% Exception handling event
+    ExceptionEvent(["Exception Occurred"]):::action
+    LogError["LogError: Exception is absorbed"]:::action
+    CheckParticipationId{"Does loadSubmissionQueueParticipation.Id > 0?"}:::decision
+    UpdateFailedParticipation["Update Participation: Set LoadStatusId = Failed"]:::lsqpm
+    AddFailedParticipation["Add Participation: Set LoadStatusId = Failed"]:::lsqpm
+
+    %% Connect exception event to End
+    ExceptionEvent --> LogError --> CheckParticipationId
+    CheckParticipationId -- Yes --> UpdateFailedParticipation --> End
+    CheckParticipationId -- No --> AddFailedParticipation --> End
+
+    %% Exception broken line (dotted)
+    Start -. Exception .-> ExceptionEvent
+
+    %% Exception handling event
+    ExceptionEvent(["Exception Occurred"]):::action
+    LogError["LogError: Exception is absorbed"]:::action
+    CheckParticipationId{"Does loadSubmissionQueueParticipation.Id > 0?"}:::decision
+    UpdateFailedParticipation["Update Participation: Set LoadStatusId = Failed, ParticipationStatus = Participant"]:::lsqpm
+    AddFailedParticipation["Add Participation: Set LoadStatusId = Failed, ParticipationStatus = Participant"]:::lsqpm
+
+
+  
+
+    classDef dataloader fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#111;
+    classDef participation fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#111;
+    classDef survey fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#111;
+    classDef datacollection fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#111;
+    classDef lsqpm fill:#f9fbe7,stroke:#afb42b,stroke-width:2px,color:#111;
+    classDef pm fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px,color:#111;
+    classDef startend fill:#b2dfdb,stroke:#00695c,stroke-width:3px,color:#111;
+    classDef loop fill:#ffe082,stroke:#fbc02d,stroke-width:2px,color:#111;
+    classDef action fill:#b3e5fc,stroke:#0288d1,stroke-width:2px,color:#111;
+    classDef decision fill:#ffe0b2,stroke:#f57c00,stroke-width:2px,color:#111;
+    classDef legend fill:#fff,stroke:#888,stroke-width:1px,color:#111;
+    class Start,End startend;

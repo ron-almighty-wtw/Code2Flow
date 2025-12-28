@@ -1,0 +1,84 @@
+flowchart LR
+
+    
+    Start(["Start: CreateLoadSubmissionQueueParticipations"]):::startend
+    parFetch0(( )):::action
+    GetQueue["DataLoaderService: Get LoadSubmissionQueue"]:::dataloader
+    GetQueueDetail["DataLoaderService: Get QueueDetail"]:::dataloader
+    GetUploadedDsw["DataLoaderService: Get Uploaded DSW"]:::dataloader
+    AddLSQP2["DataLoaderService: Add LoadSubmissionQueueParticipation"]:::dataloader
+
+    GetPersonalizedDsw["ParticipationService: Get Personalized DSW by Id"]:::participation
+    GetUser["ParticipationService: Get User by Id"]:::participation
+    GetPersonalizedDswTemplate["ParticipationService: Get Personalized DSW Template"]:::participation
+    GetParticipation["ParticipationService: Get Participation by Id"]:::participation
+    AddOrUpdateWorkbook["ParticipationService: Add/Update Participation Workbook"]:::participation
+
+    GetVersionDetails["SurveySetupService: Get Version Details"]:::survey
+
+    GetParticipationUser["DataCollectionService: Get Participation User"]:::datacollection
+
+    GetValidationDetail["LoadSubmissionQueueParticipationManager: Get Validation Detail"]:::lsqpm
+    AddLSQP["LoadSubmissionQueueParticipationManager: Add LoadSubmissionParticipation"]:::lsqpm
+    GetValidationDetail2["LoadSubmissionQueueParticipationManager: Get Validation Detail"]:::lsqpm
+
+    ManageParticipation["ParticipationManager: Manage Participation"]:::pm
+
+    ForEachParticipation["For each participation in Personalized DSW"]:::loop
+    parFetch1(( )):::action
+    parFetch2(( )):::action
+    parActions(( )):::action
+    parActionsEnd(( )):::action
+    LSQPRecordsCreated{Any LSQP records created?}:::decision
+    End(["End"]):::startend
+
+    %% Legend is visually present but not part of the flow
+    Start --> parFetch0
+    parFetch0 --> GetQueue
+    parFetch0 --> GetQueueDetail
+    GetQueue --> parFetch1
+    GetQueueDetail --> parFetch1
+    parFetch1 --> GetPersonalizedDsw
+    parFetch1 --> GetUser
+    parFetch1 --> GetUploadedDsw
+    GetPersonalizedDsw --> ForEachParticipation
+    GetUser --> ForEachParticipation
+    GetUploadedDsw --> ForEachParticipation
+    ForEachParticipation --> parFetch2
+    parFetch2 --> GetVersionDetails
+    parFetch2 --> GetParticipation
+    parFetch2 --> GetParticipationUser
+    GetVersionDetails --> GetParticipation
+    GetParticipation --> GetParticipationUser
+        GetParticipationUser --> LSQPCondition
+        LSQPCondition{"isNeitherParticipantNorProvisional OR isParticipantWithReceivedRVQ?"}:::decision
+        LSQPCondition -- Yes --> CreateLSQP
+        LSQPCondition -- No --> ForEachParticipation
+        CreateLSQP --> ManageParticipation
+        ManageParticipation --> GetValidationDetail
+        GetValidationDetail --> parActions
+        parActions --> AddLSQP
+        parActions --> AddOrUpdateWorkbook
+        AddLSQP --> parActionsEnd
+        AddOrUpdateWorkbook --> parActionsEnd
+        parActionsEnd --> ForEachParticipation
+    ForEachParticipation --> LSQPRecordsCreated
+    LSQPRecordsCreated -- No --> GetPersonalizedDswTemplate
+    GetPersonalizedDswTemplate --> GetValidationDetail2
+    GetValidationDetail2 --> AddLSQP2
+    AddLSQP2 --> End
+    LSQPRecordsCreated -- Yes --> End
+
+    classDef dataloader fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#111;
+    classDef participation fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#111;
+    classDef survey fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#111;
+    classDef datacollection fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#111;
+    classDef lsqpm fill:#f9fbe7,stroke:#afb42b,stroke-width:2px,color:#111;
+    classDef pm fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px,color:#111;
+    classDef startend fill:#b2dfdb,stroke:#00695c,stroke-width:3px,color:#111;
+    classDef loop fill:#ffe082,stroke:#fbc02d,stroke-width:2px,color:#111;
+    classDef action fill:#b3e5fc,stroke:#0288d1,stroke-width:2px,color:#111;
+    classDef decision fill:#ffe0b2,stroke:#f57c00,stroke-width:2px,color:#111;
+    classDef legend fill:#fff,stroke:#888,stroke-width:1px,color:#111;
+    class Legend1 legend;
+    class Start,End startend;

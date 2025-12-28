@@ -1,0 +1,70 @@
+flowchart LR
+    %% Nodes
+    Start(["Start"]):::start
+    OrderSteps["Order Steps: preLoadPersonalizeSteps.OrderBy(StepId)"]:::action
+    StepsTB["Steps"]:::stepslist
+    Step1["Step1: InitializeStateStep"]:::step
+    Step2["Step2: GetDSWFileInfoStep"]:::step
+    Step3["Step3: FileLevelCheckStep"]:::step
+    Step4["Step4: MakeDiscVersionStep"]:::step
+    Step5["Step5: SubmissionLevelCheckStep"]:::step
+    Step6["Step6: QueuePersonalizedDSWSubmissionStep"]:::step
+    Step7["Step7: QueuePersonalizeManualSubmissionStep"]:::step
+    Step8["Step8: SubmissionErrorStep"]:::step
+    RunStep["RunStep"]:::runStep
+    BreakStep{state.BreakStep?}:::decision
+    End(["End"]):::endfinal
+    Exception["Exception Occurred"]:::exception
+    LogError["Logger: LogError"]:::logger
+    SetManual["Set state.Result.CodeType = Manual\nSet state.Result.ErrorCode = PreloadFailed"]:::manual
+    FindManualStep["Find Step7: QueuePersonalizeManualSubmissionStep"]:::action
+    RunManualStep["Run Step7: QueuePersonalizeManualSubmissionStep"]:::step
+    GetValidation["DataloaderService: GetValidationLookupAsync\n(state.Result.ErrorCode)"]:::service
+    SetErrorDesc["Set state.Result.ErrorDescription"]:::action
+
+    %% Main flow
+    Start --> OrderSteps --> StepsTB
+    StepsTB -.- Step1
+    StepsTB -.- Step2
+    StepsTB -.- Step3
+    StepsTB -.- Step4
+    StepsTB -.- Step5
+    StepsTB -.- Step6
+    StepsTB -.- Step7
+    StepsTB -.- Step8
+    Step1 -.- RunStep
+    Step2 -.- RunStep
+    Step3 -.- RunStep
+    Step4 -.- RunStep
+    Step5 -.- RunStep
+    Step6 -.- RunStep
+    Step7 -.- RunStep
+    Step8 -.- RunStep
+    RunStep --> BreakStep
+    BreakStep -- Yes --> GetValidation
+    BreakStep -- (proceed to next step) --> StepsTB
+    GetValidation --> SetErrorDesc --> End
+
+    %% Exception flow
+    StepsTB -.->|Exception| Exception
+    Exception -.-> LogError -.-> SetManual -.-> FindManualStep -.-> RunManualStep -.-> GetValidation
+
+    %% Styling (readable text)
+    classDef start fill:#e3f6fc,stroke:#007acc,stroke-width:2px,color:#00334d,font-weight:bold;
+    classDef endfinal fill:#b3ffcc,stroke:#009966,stroke-width:3px,color:#003d26,font-weight:bold;
+    classDef action fill:#fffbe6,stroke:#ffb300,stroke-width:2px,color:#665200;
+    classDef stepslist fill:#f3e8ff,stroke:#6c63ff,stroke-width:2px,color:#2d186c,font-weight:bold;
+    classDef step fill:#fff6e6,stroke:#b7950b,stroke-width:2px,stroke-dasharray: 5 5,color:#665200;
+    classDef service fill:#ffe0e6,stroke:#e75480,stroke-width:2px,color:#7a2941;
+    classDef decision fill:#f3e8ff,stroke:#6c63ff,stroke-width:2px,color:#2d186c,font-weight:bold;
+    classDef exception fill:#f8d7da,stroke:#d9534f,stroke-width:2px,stroke-dasharray: 5 5,color:#7a2323;
+    classDef logger fill:#d1ecf1,stroke:#0c5460,stroke-width:2px,stroke-dasharray: 5 5,color:#00333a;
+    classDef manual fill:#fbeee6,stroke:#e67e22,stroke-width:2px,stroke-dasharray: 5 5,color:#7a4a0a;
+    class Start start;
+    class End endfinal;
+    class OrderSteps,FindManualStep,SetErrorDesc,SetManual action;
+    class StepsTB stepslist;
+    class Step1,Step2,Step3,Step4,Step5,Step6,Step7,Step8,RunManualStep step;
+    class GetValidation service;
+    class Exception exception;
+    class LogError logger;
