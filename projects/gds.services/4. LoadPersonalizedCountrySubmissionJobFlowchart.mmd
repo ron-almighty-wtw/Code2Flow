@@ -1,0 +1,80 @@
+flowchart LR
+
+    Start(["Start: ProcessAsync/ProcessXLAsync"]):::startend
+    parFetch0(( )):::action
+    parFetch1(( )):::action
+    parFetch2(( )):::action
+    End(["End"]):::startend
+
+    %% Exception handling
+    ExceptionEvent(["Exception Occurred"]):::action
+    LogError["LogError: Exception is absorbed"]:::action
+    UpdateFailedParticipation["Update Participation: Failed"]:::lsqpm
+    GenerateEmailJob["GenerateEmailJobManager.Enqueue"]:::email
+
+    %% Parallel fetches at start
+    Start --> parFetch0
+    parFetch0 --> GetQueueDetail["DataLoaderService: GetQueueDetailAsync"]:::dataloader
+    parFetch0 --> GetQueue["DataLoaderService: GetLoadSubmissionQueueAsync"]:::dataloader
+    parFetch0 --> GetParticipation["DataLoaderService: GetLoadSubmissionQueueParticipationAsync"]:::dataloader
+    parFetch0 --> GetParentInfoKeys["ParentInformationDataManager: GetParentInfoElementKeys"]:::parentinfo
+
+    GetQueueDetail --> parFetch1
+    GetQueue --> parFetch1
+    GetParticipation --> parFetch1
+    GetParentInfoKeys --> parFetch1
+
+    parFetch1 --> GetPersonalizedDsw["ParticipationService: GetPersonalizedDswByIdAsync"]:::participation
+    parFetch1 --> GetPersonalizedDswTemplate["ParticipationService: GetPersonalizedDswTemplateAsync"]:::participation
+
+    GetPersonalizedDsw --> parFetch2
+    GetPersonalizedDswTemplate --> parFetch2
+
+    parFetch2 --> MapTemplateMetadata["Map PDswTemplateMetadataDTO"]:::action
+    MapTemplateMetadata --> MapVersionWorksheets["Map VersionWorksheets"]:::action
+    MapTemplateMetadata --> MapVersionElements["Map VersionElements"]:::action
+    MapTemplateMetadata --> GetCaseIdVersionElement["SurveySetupService: GetCaseIdVersionElementAsync"]:::survey
+
+    MapVersionWorksheets --> GetVersionWorksheets["SurveySetupService: GetVersionWorksheetsAsync"]:::survey
+    MapVersionElements --> CheckGrantCaseId["Check/Add Grant CaseId Element"]:::action
+    MapVersionElements --> CheckIncumbentCaseId["Check/Add Incumbent CaseId Element"]:::action
+    GetCaseIdVersionElement --> CheckIncumbentCaseId
+
+    CheckGrantCaseId --> CheckElementsExist{"Any VersionElements?"}:::decision
+    CheckIncumbentCaseId --> CheckElementsExist
+    GetVersionWorksheets --> CheckElementsExist
+
+    CheckElementsExist -- No --> UpdateLoadSubmissionQueueParticipation["UpdateLoadSubmissionQueueParticipation: MissingVersionElementTranslationErrorMessage"]:::lsqpm
+    UpdateLoadSubmissionQueueParticipation --> End
+    CheckElementsExist -- Yes --> PrepareCountryFlags["Prepare CountryCodeLoadingFlagsDTO"]:::action
+    PrepareCountryFlags --> PrepareParticipationCountry["Prepare ParticipationCountryDTO"]:::action
+    PrepareParticipationCountry --> MapWorksheetsElements["Map Worksheets/Elements"]:::action
+    MapWorksheetsElements --> CheckStagingData["HasExistingStagingData?"]:::decision
+    CheckStagingData -- Yes --> ThrowDataAlreadyExistsException["Throw DataAlreadyExistsException"]:::exception
+    CheckStagingData -- No --> GetOrgProfileData["Get OrgProfileData (if UseOrgProfile)"]:::action
+    GetOrgProfileData --> TryMergeParentInfo["TryMergeParentInformationDataAsync"]:::parentinfo
+    TryMergeParentInfo --> LoadWorkbook["DataLoaderService: LoadWorkbookAsync"]:::dataloader
+    LoadWorkbook --> GenerateNewSubmissionId["DataLoaderService: GenerateNewSubmissionIdAsync"]:::dataloader
+    GenerateNewSubmissionId --> parFetch3(( )):::action
+    parFetch3 --> CreateVersionSubmission["CreateVersionSubmissionAsync"]:::action
+    parFetch3 --> UpdateParticipationSubmissionId["UpdateLoadSubmissionQueueParticipationAsync"]:::lsqpm
+    UpdateParticipationSubmissionId --> MergeWorksheets["Merge Worksheets"]:::action
+    MergeWorksheets --> ValidateCountrySubmission["ValidateCountrySubmissionQueueManager: ValidateCountrySubmissionAsync"]:::validation
+    ValidateCountrySubmission --> End
+
+    %% Exception handling flow
+    Start -. Exception .-> ExceptionEvent
+    ExceptionEvent --> LogError --> UpdateFailedParticipation --> GenerateEmailJob --> End
+
+    classDef dataloader fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#111;
+    classDef participation fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#111;
+    classDef survey fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#111;
+    classDef parentinfo fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#111;
+    classDef lsqpm fill:#f9fbe7,stroke:#afb42b,stroke-width:2px,color:#111;
+    classDef validation fill:#ffe082,stroke:#fbc02d,stroke-width:2px,color:#111;
+    classDef exception fill:#fbe9e7,stroke:#d84315,stroke-width:2px,color:#111;
+    classDef startend fill:#b2dfdb,stroke:#00695c,stroke-width:3px,color:#111;
+    classDef action fill:#b3e5fc,stroke:#0288d1,stroke-width:2px,color:#111;
+    classDef decision fill:#ffe0b2,stroke:#f57c00,stroke-width:2px,color:#111;
+    classDef email fill:#fce4ec,stroke:#ad1457,stroke-width:2px,color:#111;
+    class Start,End startend;

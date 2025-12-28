@@ -27,11 +27,11 @@ Ideal for documentation, presentations, and technical reviews
 
 ## Folder Structure
 ```
-projects/<project-name>/flows/<module>/<scope_feature_version>.mmd
+projects/<project-name>/flows/<module>/<ScopeFeature>.mmd
 ```
 - **project-name**: kebab-case (e.g., `billing-service`)
 - **module**: group related flows (e.g., `auth`, `pipeline`, `orders`)
-- **scope_feature_version**: e.g., `auth_login_v1.mmd`
+- **ScopeFeature**: e.g., `AuthenticateUserFlowChart.mmd`
 
 ## Conventions
 Each `.mmd` should start with metadata:

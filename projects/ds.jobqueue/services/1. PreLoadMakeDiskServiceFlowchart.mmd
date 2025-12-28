@@ -1,0 +1,39 @@
+flowchart LR
+    %% ProcessAsync Method
+    Start1(["ProcessAsync Start"]):::start
+    CreateState1["Create PreLoadProcessingMakeDiscState"]:::action
+    SetSkipStep["Set state.SkipStep = Step2"]:::action
+    StartTimer1["Start Stopwatch"]:::action
+    LogBegin1["Logger: LogInformation (Begin Preload)"]:::logger
+    RunProcessor["PreLoadMakeDiscStepsProcessor:\nRunStepsAsync(state)"]:::service
+    Exception1["Exception Occurred"]:::exception
+    LogError1["Logger: LogError"]:::logger
+    SetError1["Set state.Result.CodeType = Error\nSet state.Result.ErrorCode = PreloadFailed"]:::manual
+    CalcElapsed1["Calculate Elapsed Time"]:::action
+    LogComplete1["Logger: LogInformation (Complete)"]:::logger
+    Return1(["Return state.Result"]):::endnode
+
+    %% ProcessAsync Flow
+    Start1 --> CreateState1 --> SetSkipStep --> StartTimer1 --> LogBegin1 --> RunProcessor
+    RunProcessor --> CalcElapsed1
+    RunProcessor -.->|Exception| Exception1
+    Exception1 -.-> LogError1 -.-> SetError1 -.-> CalcElapsed1
+    CalcElapsed1 --> LogComplete1 --> Return1
+
+    %% Styling (readable text)
+    classDef start fill:#e3f6fc,stroke:#007acc,stroke-width:2px,color:#00334d,font-weight:bold;
+    classDef endnode fill:#d4f8e8,stroke:#009966,stroke-width:2px,color:#003d26,font-weight:bold;
+    classDef step fill:#f3e8ff,stroke:#6c63ff,stroke-width:2px,color:#2d186c;
+    classDef action fill:#fffbe6,stroke:#ffb300,stroke-width:2px,color:#665200;
+    classDef service fill:#ffe0e6,stroke:#e75480,stroke-width:2px,color:#7a2941;
+    classDef decision fill:#fff6d6,stroke:#b7950b,stroke-width:2px,color:#665200;
+    classDef exception fill:#f8d7da,stroke:#d9534f,stroke-width:2px,stroke-dasharray: 5 5,color:#7a2323;
+    classDef logger fill:#d1ecf1,stroke:#0c5460,stroke-width:2px,stroke-dasharray: 5 5,color:#00333a;
+    classDef manual fill:#fbeee6,stroke:#e67e22,stroke-width:2px,stroke-dasharray: 5 5,color:#7a4a0a;
+    class Start1 start;
+    class Return1 endnode;
+    class CreateState1,SetSkipStep,StartTimer1,CalcElapsed1 action;
+    class RunProcessor service;
+    class Exception1 exception;
+    class LogBegin1,LogComplete1,LogError1 logger;
+    class SetError1 manual;

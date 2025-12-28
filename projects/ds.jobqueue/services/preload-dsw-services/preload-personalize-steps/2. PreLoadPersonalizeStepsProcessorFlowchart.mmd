@@ -1,0 +1,49 @@
+flowchart LR
+    %% Nodes
+    Start(["Start"]):::start
+    OrderSteps["PreLoadPersonalizeSteps: OrderBy(StepId)"]:::step
+    ForEachStep{For each Step\nin Ordered Steps}:::decision
+    RunStep["PreLoadPersonalizeStep: RunAsync(state)\n(Note: Each step updates state)"]:::action
+    BreakStep{state.BreakStep?}:::decision
+    End(["End"]):::endnode
+    Exception["Exception Occurred"]:::exception
+    LogError["Logger: LogError"]:::logger
+    SetManual["Set state.Result.CodeType = Manual\nSet state.Result.ErrorCode = PreloadFailed"]:::manual
+    FindManualStep["PreLoadPersonalizeSteps: Get Step7 - QueuePersonalizeManualSubmissionStep"]:::step
+    RunManualStep["PreLoadPersonalizeStep: RunAsync(state) (Step7)\n(Note: Step updates state)"]:::action
+    GetValidation["DataloaderService: GetValidationLookupAsync\n(state.Result.ErrorCode)"]:::service
+    SetErrorDesc["Set state.Result.ErrorDescription"]:::action
+
+    %% Main flow
+    Start --> OrderSteps --> ForEachStep
+    ForEachStep --> RunStep --> BreakStep
+    BreakStep -- No --> ForEachStep
+    BreakStep -- Yes --> GetValidation
+    ForEachStep -.->|Exception| Exception
+    OrderSteps -.->|Exception| Exception
+
+    %% Exception flow
+    Exception -.-> LogError -.-> SetManual -.-> FindManualStep -.-> RunManualStep -.-> GetValidation
+
+    %% After steps or exception
+    GetValidation --> SetErrorDesc --> End
+
+    %% Styling (readable text)
+    classDef start fill:#e3f6fc,stroke:#007acc,stroke-width:2px,color:#00334d,font-weight:bold;
+    classDef endnode fill:#d4f8e8,stroke:#009966,stroke-width:2px,color:#003d26,font-weight:bold;
+    classDef step fill:#f3e8ff,stroke:#6c63ff,stroke-width:2px,color:#2d186c;
+    classDef action fill:#fffbe6,stroke:#ffb300,stroke-width:2px,color:#665200;
+    classDef service fill:#ffe0e6,stroke:#e75480,stroke-width:2px,color:#7a2941;
+    classDef decision fill:#fff6d6,stroke:#b7950b,stroke-width:2px,color:#665200;
+    classDef exception fill:#f8d7da,stroke:#d9534f,stroke-width:2px,stroke-dasharray: 5 5,color:#7a2323;
+    classDef logger fill:#d1ecf1,stroke:#0c5460,stroke-width:2px,stroke-dasharray: 5 5,color:#00333a;
+    classDef manual fill:#fbeee6,stroke:#e67e22,stroke-width:2px,stroke-dasharray: 5 5,color:#7a4a0a;
+    class Start start;
+    class End endnode;
+    class OrderSteps,FindManualStep step;
+    class RunStep,RunManualStep,SetErrorDesc action;
+    class GetValidation service;
+    class ForEachStep,BreakStep decision;
+    class Exception exception;
+    class LogError logger;
+    class SetManual manual;
