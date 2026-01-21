@@ -62,7 +62,7 @@ flowchart LR
         AddLSQP --> parActionsEnd
         AddOrUpdateWorkbook --> parActionsEnd
         parActionsEnd --> ForEachParticipation
-    ForEachParticipation --> LSQPRecordsCreated
+    ForEachParticipation -- Loop completed --> LSQPRecordsCreated
     LSQPRecordsCreated -- No --> GetPersonalizedDswTemplate
     GetPersonalizedDswTemplate --> GetValidationDetail2
     GetValidationDetail2 --> AddLSQP2

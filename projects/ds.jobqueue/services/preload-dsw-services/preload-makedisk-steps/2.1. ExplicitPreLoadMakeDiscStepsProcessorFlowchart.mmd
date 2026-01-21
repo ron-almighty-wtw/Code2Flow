@@ -6,10 +6,11 @@ flowchart LR
     Step1["Step1: InitializeStep"]:::step
     Step2["Step2: AddOrUpdateParticipationWorkbookStep"]:::step
     Step3["Step3: FileLevelCheckStep"]:::step
-    Step4["Step4: QueueMakeDiscCorrectionManualSubmissionStep"]:::step
-    Step5["Step5: QueueMakeDiscByPassAscentManualSubmissionStep"]:::step
-    Step6["Step6: QueueMakeDiscValidWorkSheetManualSubmissionStep"]:::step
-    Step7["Step7: ProcessVersionsStep"]:::step
+    Step4["Step4: SubmissionLevelCheckStep"]:::step
+    Step5["Step5: QueueMakeDiscCorrectionManualSubmissionStep"]:::step
+    Step6["Step6: QueueMakeDiscByPassAscentManualSubmissionStep"]:::step
+    Step7["Step7: QueueMakeDiscValidWorkSheetManualSubmissionStep"]:::step
+    Step8["Step8: ProcessVersionsStep"]:::step
     RunStep["RunStep"]:::runStep
     End(["End"]):::endfinal
     Exception["Exception Occurred"]:::exception
@@ -28,6 +29,7 @@ flowchart LR
     StepsTB -.- Step5
     StepsTB -.- Step6
     StepsTB -.- Step7
+    StepsTB -.- Step8
     Step1 -.- RunStep
     Step2 -.- RunStep
     Step3 -.- RunStep
@@ -35,6 +37,7 @@ flowchart LR
     Step5 -.- RunStep
     Step6 -.- RunStep
     Step7 -.- RunStep
+    Step8 -.- RunStep
     
     RunStep --> BreakStep    
     BreakStep{state.BreakStep?}:::decision
@@ -61,7 +64,7 @@ flowchart LR
     class End endfinal;
     class OrderSteps,SetErrorDesc,SetManual action;
     class StepsTB stepslist;
-    class Step1,Step2,Step3,Step4,RunManualStep step;
+    class Step1,Step2,Step3,Step4,Step5,Step6,Step7,Step8,RunManualStep step;
     class GetValidation service;
     class Exception exception;
     class LogError logger;

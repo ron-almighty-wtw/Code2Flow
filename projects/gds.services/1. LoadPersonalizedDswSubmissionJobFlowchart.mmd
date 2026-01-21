@@ -70,11 +70,11 @@ flowchart LR
     SubmissionIssues -- No --> InvalidExcess{Has invalid or excess countries?}:::decision
 
     InvalidExcess{Has invalid or excess countries?}:::decision
-    InvalidExcess -- Yes  --> DataLoaderService_UpsertQueueDetail --> PersonalizedInvalidExcessManager_CreateParticipations
+    InvalidExcess -- Yes  --> DataLoaderService_UpsertQueueDetail -- Yes --> PersonalizedInvalidExcessManager_CreateParticipations
     PersonalizedInvalidExcessManager_CreateParticipations --> GenerateEmailJobManager_EnqueueEmail
     GenerateEmailJobManager_EnqueueEmail --> End
 
-    InvalidExcess -- No --> DataLoaderService_UpsertQueueDetail --> ForEachParticipation["For each participation/country"]:::loop
+    InvalidExcess -- No --> DataLoaderService_UpsertQueueDetail -- No --> ForEachParticipation["For each participation/country"]:::loop
     ForEachParticipation --> parCountry
     parCountry --> LoadSubmissionJobManager_EnqueuePersonalizedParticipationProcessing
     %% All per-country jobs complete, then continue
