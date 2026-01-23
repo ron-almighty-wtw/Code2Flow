@@ -3,10 +3,12 @@ flowchart LR
     Start(["Start"]):::start
     InitState["Create PreLoadProcessingPersonalizedState"]:::action
     RunSteps["PreLoadPersonalizeStepsProcessor: RunStepsAsync(state)\n(Note: Each step updates state)"]:::service
+    RunStepsNote["See flowchart:\n PreLoadPersonalizeStepsProcessorFlowchart.mmd"]:::note
     ShouldCreateMakeDisc{state.ShouldCreateMakeDiscRequest?}:::decision
     CreateMakeDiscReq["PreLoadPersonalizeStepsProcessor: CreateBackwardsCompatibilityRequestAsync(state)"]:::service
     InitMakeDiscState["Create PreLoadProcessingMakeDiscState"]:::action
     RunMakeDiscSteps["PreLoadMakeDiscStepsProcessor: RunStepsAsync(makeDiscState)\n(Note: Each step updates state)"]:::service
+    RunMakeDiscStepsNote["See flowchart:\nPreLoadMakeDiskStepsProcessorFlowchart.mmd"]:::note
     SetProcessFlag["Set makeDiscState.Result.ProcessUsingMakeDiscVersion = true"]:::action
     SetParticipationId["Set makeDiscState.Result.ParticipationId = makeDiscRequest.ParticipationId"]:::action
     ReturnMakeDiscResult["Return makeDiscState.Result"]:::endnode
@@ -19,11 +21,15 @@ flowchart LR
     Elapsed["Calculate elapsed time"]:::action
 
     %% Main flow
-    Start --> InitState --> RunSteps --> ShouldCreateMakeDisc
-    ShouldCreateMakeDisc -- Yes (process using makedisk)--> CreateMakeDiscReq --> InitMakeDiscState --> RunMakeDiscSteps --> SetProcessFlag --> SetParticipationId --> ReturnMakeDiscResult --> End
+    Start --> InitState --> RunSteps
+    RunSteps -.- RunStepsNote
+    RunSteps --> ShouldCreateMakeDisc
+    ShouldCreateMakeDisc -- Yes (process using makedisk)--> CreateMakeDiscReq --> InitMakeDiscState --> RunMakeDiscSteps
+    RunMakeDiscSteps -.- RunMakeDiscStepsNote
+    RunMakeDiscSteps --> SetProcessFlag --> SetParticipationId --> ReturnMakeDiscResult --> End
     ShouldCreateMakeDisc -- No --> Elapsed
-    RunSteps -.->|Exception| CatchBlock
-    RunMakeDiscSteps -.->|Exception| CatchBlock
+    RunSteps -.->|Any exception| CatchBlock
+    
 
     %% Exception flow
     CatchBlock -.-> LogError -.-> SetErrorType -.-> Elapsed
@@ -41,6 +47,7 @@ flowchart LR
     classDef exception fill:#f8d7da,stroke:#d9534f,stroke-width:2px,stroke-dasharray: 5 5,color:#7a2323;
     classDef logger fill:#d1ecf1,stroke:#0c5460,stroke-width:2px,stroke-dasharray: 5 5,color:#00333a;
     classDef manual fill:#fbeee6,stroke:#e67e22,stroke-width:2px,stroke-dasharray: 5 5,color:#7a4a0a;
+    classDef note fill:#fff9e6,stroke:#9c6644,stroke-width:2px,stroke-dasharray: 3 3,color:#5c3c24,font-style:italic;
     class Start start;
     class ReturnMakeDiscResult,ReturnStateResult endnode;
     class End endfinal;
@@ -50,3 +57,4 @@ flowchart LR
     class CatchBlock exception;
     class LogError,LogInfo logger;
     class SetErrorType manual;
+    class RunStepsNote,RunMakeDiscStepsNote note;

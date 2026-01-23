@@ -6,6 +6,7 @@ flowchart LR
     StartTimer1["Start Stopwatch"]:::action
     LogBegin1["Logger: LogInformation (Begin Preload)"]:::logger
     RunProcessor["PreLoadMakeDiscStepsProcessor:\nRunStepsAsync(state)"]:::service
+    RunProcessorNote["See flowchart:\n PreLoadMakeDiskStepsProcessorFlowchart.mmd"]:::note
     Exception1["Exception Occurred"]:::exception
     LogError1["Logger: LogError"]:::logger
     SetError1["Set state.Result.CodeType = Error\nSet state.Result.ErrorCode = PreloadFailed"]:::manual
@@ -15,8 +16,9 @@ flowchart LR
 
     %% ProcessAsync Flow
     Start1 --> CreateState1 --> SetSkipStep --> StartTimer1 --> LogBegin1 --> RunProcessor
+    RunProcessor -.- RunProcessorNote
     RunProcessor --> CalcElapsed1
-    RunProcessor -.->|Exception| Exception1
+    RunProcessor -.->|Any exception| Exception1
     Exception1 -.-> LogError1 -.-> SetError1 -.-> CalcElapsed1
     CalcElapsed1 --> LogComplete1 --> Return1
 
@@ -30,6 +32,7 @@ flowchart LR
     classDef exception fill:#f8d7da,stroke:#d9534f,stroke-width:2px,stroke-dasharray: 5 5,color:#7a2323;
     classDef logger fill:#d1ecf1,stroke:#0c5460,stroke-width:2px,stroke-dasharray: 5 5,color:#00333a;
     classDef manual fill:#fbeee6,stroke:#e67e22,stroke-width:2px,stroke-dasharray: 5 5,color:#7a4a0a;
+    classDef note fill:#fff9e6,stroke:#9c6644,stroke-width:2px,stroke-dasharray: 3 3,color:#5c3c24,font-style:italic;
     class Start1 start;
     class Return1 endnode;
     class CreateState1,SetSkipStep,StartTimer1,CalcElapsed1 action;
@@ -37,3 +40,4 @@ flowchart LR
     class Exception1 exception;
     class LogBegin1,LogComplete1,LogError1 logger;
     class SetError1 manual;
+    class RunProcessorNote note;

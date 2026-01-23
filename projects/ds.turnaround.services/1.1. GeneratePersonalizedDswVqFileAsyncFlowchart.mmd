@@ -1,0 +1,60 @@
+flowchart LR
+
+    Start(["Start: GeneratePersonalizedDswVqFileAsync<br/>(request, fileNameCompanyDetails, fileType)"]):::startend
+
+    GetSurveyDetails["GetSurveyDetailsAsync:<br/>Get survey participation details"]:::supportmethod
+    
+    GenerateFile["GeneratePersonalizedDswFileAsync:<br/>Generate workbook file"]:::supportmethod
+    
+    GenerateFileDetail["📄 Detailed flow in:<br/>GeneratePersonalizedDswFileAsync-flowchart.mmd"]:::detaillink
+    
+    ExtractYear["Extract year from<br/>first survey detail"]:::dataextraction
+    
+    SetVersionId["Set VersionId =<br/>generatedFile.TemplateId"]:::action
+    
+    MakeHeaders["MakeFileUploadHeaders:<br/>Create upload headers with<br/>year, versionId, PDswId"]:::action
+    
+    SetDefaultFilename["Set default fileName =<br/>'PDswId.xlsx'"]:::action
+    
+    CheckFileType{"File Type?"}:::decision
+    
+    CheckSurveyCount{"Survey details<br/>count?"}:::decision
+    
+    SetMultiCountryFilename["Set fileName =<br/>'MC_companyDetails_VQ.xlsx'"]:::action
+    
+    SetSingleCountryFilename["Set fileName =<br/>'CountryCode_companyDetails_VQ.xlsx'"]:::action
+    
+    SetDvfFilename["Set fileName =<br/>fileNameCompanyDetails"]:::action
+    
+    UploadFile["FileShareService.UploadAsync:<br/>Upload file with headers"]:::fileshare
+    
+    ReturnResult(["Return: GeneratedPdswFileResult<br/>(Filename, FilePath)"]):::startend
+
+    %% Main flow
+    Start --> GetSurveyDetails
+    GetSurveyDetails --> GenerateFile
+    GenerateFile -.-> GenerateFileDetail
+    GenerateFile --> ExtractYear
+    ExtractYear --> SetVersionId
+    SetVersionId --> MakeHeaders
+    MakeHeaders --> SetDefaultFilename
+    SetDefaultFilename --> CheckFileType
+    
+    CheckFileType -- "VqFile" --> CheckSurveyCount
+    CheckSurveyCount -- "> 1" --> SetMultiCountryFilename
+    CheckSurveyCount -- "= 1" --> SetSingleCountryFilename
+    SetMultiCountryFilename --> UploadFile
+    SetSingleCountryFilename --> UploadFile
+    
+    CheckFileType -- "DataValidationFile" --> SetDvfFilename
+    SetDvfFilename --> UploadFile
+    
+    UploadFile --> ReturnResult
+
+    classDef startend fill:#b2dfdb,stroke:#00695c,stroke-width:3px,color:#111;
+    classDef supportmethod fill:#ede7f6,stroke:#512da8,stroke-width:2px,color:#111;
+    classDef action fill:#f1f8e9,stroke:#558b2f,stroke-width:2px,color:#111;
+    classDef decision fill:#fffde7,stroke:#fbc02d,stroke-width:3px,color:#111;
+    classDef dataextraction fill:#fff8e1,stroke:#f57f17,stroke-width:2px,color:#111;
+    classDef fileshare fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#111;
+    classDef detaillink fill:#fff3e0,stroke:#e65100,stroke-width:2px,stroke-dasharray: 5 5,color:#111;

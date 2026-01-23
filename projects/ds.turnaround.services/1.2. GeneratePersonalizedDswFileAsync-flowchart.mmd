@@ -1,0 +1,90 @@
+flowchart LR
+
+    Start(["Start: GeneratePersonalizedDswVqFileAsync(request, surveyDetails, fileType)"]):::startend
+
+    GetTemplateDetails["GetTemplateDetailsAsync:<br/>Get template configuration"]:::supportmethod
+    
+    CheckFileType{"File Type?"}:::decision
+    
+    GetCustomizedOptions["VqTaService:<br/>GetCustomizedExportOptions"]:::vqta
+    SetVqFileType["Set FileType = VqFile"]:::action
+    
+    CreateExportOptions["Create ExportOptions<br/>from template worksheets"]:::action
+    AddOverallDataReview["Add OverallDataReview worksheet"]:::action
+    SetDvfFileType["Set FileType = DataValidationFile"]:::action
+    
+    GetApplicabilityDetail["GetApplicabilityDetailAsync:<br/>Get applicability and elements"]:::supportmethod
+    
+    ProcessElementSubUsage["Process ElementSubUsage IDs:<br/>- Add Grant if Incumbent exists<br/>- Add MasterData if Organization exists<br/>- Remove IncentivePlan"]:::action
+    
+    GetCompensationElements["ElementManager:<br/>ToDistinctCompensationElements"]:::element
+    
+    ExtractPlanPeriods["Extract plan time period IDs<br/>from template worksheets"]:::dataextraction
+    
+    CheckPlanPeriods{"Plan periods<br/>exist?"}:::decision
+    
+    GetQuestionnaire["ElementService:<br/>GetQuestionnaireAsync"]:::element
+    SetEmptyQuestionnaire["Set questionnaire = empty"]:::action
+    
+    BuildPdswRequest["Build GeneratePersonalizedDswRequest:<br/>- ParticipationIds<br/>- Year<br/>- Elements<br/>- WorksheetSetup"]:::action
+    
+    BuildWorksheetSetup["BuildWorksheetSetup:<br/>Headers, Categories, Picklists"]:::supportmethod
+    
+    SaveMetadata["SaveMetadataAsync:<br/>Add personalized DSW metadata"]:::supportmethod
+    
+    CleanupWorksheets["Cleanup worksheets:<br/>Remove Organization/Contact worksheets<br/>not selected for export"]:::action
+    
+    GetSubmissionData["GetSubmissionDataAsync:<br/>Get editor data and submission errors"]:::supportmethod
+    
+    SetVqOptions["Set VQ export options<br/>on submission data"]:::action
+    
+    SetUseVqFlag["Set UseVqService = true"]:::action
+    
+    GenerateWorkbook["PersonalizedDswManager:<br/>GeneratePersonalizedDswWorkbookAsync"]:::pdswmanager
+    
+    ApplyExcelWorkarounds["ApplyExcelWorkaroundsAndSave:<br/>- Set headers/footers with logo<br/>- Update cells with formulas<br/>- Save to byte array"]:::action
+    
+    End(["Return: VqFileResponse<br/>(Data, TemplateId)"]):::startend
+
+    %% Main flow
+    Start --> GetTemplateDetails
+    GetTemplateDetails --> CheckFileType
+    
+    CheckFileType -- "VqFile" --> GetCustomizedOptions
+    GetCustomizedOptions --> SetVqFileType
+    SetVqFileType --> GetApplicabilityDetail
+    
+    CheckFileType -- "DataValidationFile" --> CreateExportOptions
+    CreateExportOptions --> AddOverallDataReview
+    AddOverallDataReview --> SetDvfFileType
+    SetDvfFileType --> GetApplicabilityDetail
+    
+    GetApplicabilityDetail --> ProcessElementSubUsage
+    ProcessElementSubUsage --> GetCompensationElements
+    GetCompensationElements --> ExtractPlanPeriods
+    ExtractPlanPeriods --> CheckPlanPeriods
+    
+    CheckPlanPeriods -- Yes --> GetQuestionnaire
+    CheckPlanPeriods -- No --> SetEmptyQuestionnaire
+    
+    GetQuestionnaire --> BuildPdswRequest
+    SetEmptyQuestionnaire --> BuildPdswRequest
+    
+    BuildPdswRequest --> BuildWorksheetSetup
+    BuildWorksheetSetup --> SaveMetadata
+    SaveMetadata --> CleanupWorksheets
+    CleanupWorksheets --> GetSubmissionData
+    GetSubmissionData --> SetVqOptions
+    SetVqOptions --> SetUseVqFlag
+    SetUseVqFlag --> GenerateWorkbook
+    GenerateWorkbook --> ApplyExcelWorkarounds
+    ApplyExcelWorkarounds --> End
+
+    classDef startend fill:#b2dfdb,stroke:#00695c,stroke-width:3px,color:#111;
+    classDef supportmethod fill:#ede7f6,stroke:#512da8,stroke-width:2px,color:#111;
+    classDef vqta fill:#ffccbc,stroke:#bf360c,stroke-width:2px,color:#111;
+    classDef action fill:#f1f8e9,stroke:#558b2f,stroke-width:2px,color:#111;
+    classDef decision fill:#fffde7,stroke:#fbc02d,stroke-width:3px,color:#111;
+    classDef element fill:#e8eaf6,stroke:#3949ab,stroke-width:2px,color:#111;
+    classDef dataextraction fill:#fff8e1,stroke:#f57f17,stroke-width:2px,color:#111;
+    classDef pdswmanager fill:#e0f2f1,stroke:#00695c,stroke-width:2px,color:#111;

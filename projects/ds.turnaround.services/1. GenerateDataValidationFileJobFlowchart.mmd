@@ -1,0 +1,87 @@
+flowchart LR
+
+    Start(["Start: ProcessAsync(pdswId, queueId, submissionIds)"]):::startend
+
+    GetJobHistory["Hangfire: Get job history details"]:::hangfire
+    CheckHistory{Job history<br/>count < 1?}:::decision
+    EarlyReturn(["Early Return"]):::startend
+
+    ParticipationService_GetPdsw1["ParticipationService: Get PersonalizedDsw by Id"]:::participation
+    SetInProgress["Set Status = InProgress"]:::action
+    ParticipationService_UpsertPdsw1["ParticipationService: Upsert PersonalizedDsw"]:::participation
+    
+    DataLoaderService_GetQueue["DataLoaderService: Get LoadSubmissionQueue"]:::dataloader
+    GenerateFileName["Generate file name:<br/>CompanyCode-CompanyName-QueueId-preVQ-ErrorLog.xlsx"]:::action
+    SetProperties["Set QueueId and SubmissionIds properties"]:::action
+    
+    GenerateFile["GeneratePersonalizedDswVqFileAsync:<br/>Create Data Validation File (Excel)"]:::filegeneration
+    GenerateFileDetail["📄 See detailed flow:<br/>GeneratePersonalizedDswVqFileAsync-flowchart.mmd"]:::detaillink
+    
+    ParticipationService_GetPdsw2["ParticipationService: Get PersonalizedDsw by Id (refresh)"]:::participation
+    UpdateFileDetails["Update pdswDetails:<br/>- Filename<br/>- FilePath<br/>- Status = Success"]:::action
+    
+    SignalRService_Notify["SignalRService: Send participation status update<br/>(GenerateDVFCompleted)"]:::signalr
+    
+    ParticipationService_GetUser1["ParticipationService: Get user by Id"]:::participation
+    SendSuccessEmail["EmailService: Send success email<br/>(dvf_generation_success)"]:::email
+    
+    ParticipationService_UpsertPdswFinal["ParticipationService: Upsert PersonalizedDsw<br/>(Final Save)"]:::participation
+    
+    ExceptionCaught["Exception Caught"]:::exception
+    SetFailed["Set Status = Failed<br/>Set ErrorMessage"]:::action
+    GetTemplateName["Get Template Name:<br/>from pdswDetails or fetch by PdswId"]:::action
+    
+    ParticipationService_GetUser2["ParticipationService: Get user by Id"]:::participation
+    SendFailureEmail["EmailService: Send failure email<br/>(dvf_generation_failed)"]:::email
+    LogError["Logger: Log error"]:::logging
+    RethrowException["Re-throw exception"]:::exception
+    
+    End(["End"]):::startend
+
+    %% Main flow
+    Start --> GetJobHistory
+    GetJobHistory --> CheckHistory
+    CheckHistory -- Yes --> EarlyReturn
+    CheckHistory -- No --> ParticipationService_GetPdsw1
+  
+   
+    ParticipationService_GetPdsw1 --> SetInProgress
+    SetInProgress --> ParticipationService_UpsertPdsw1
+    ParticipationService_UpsertPdsw1 --> DataLoaderService_GetQueue
+    DataLoaderService_GetQueue --> GenerateFileName
+    GenerateFileName --> SetProperties
+    SetProperties --> GenerateFile
+    GenerateFile -.-> GenerateFileDetail
+    
+    GenerateFile --> ParticipationService_GetPdsw2
+    ParticipationService_GetPdsw2 --> UpdateFileDetails
+    UpdateFileDetails --> SignalRService_Notify
+    SignalRService_Notify --> ParticipationService_GetUser1
+    ParticipationService_GetUser1 --> SendSuccessEmail
+    SendSuccessEmail --> ParticipationService_UpsertPdswFinal
+    ParticipationService_UpsertPdswFinal --> End
+
+    %% Exception handling path - single path from try block
+    CheckHistory -. "Any Exception" .-> ExceptionCaught
+    
+    ExceptionCaught --> SetFailed
+    SetFailed --> GetTemplateName
+    GetTemplateName --> ParticipationService_GetUser2
+    ParticipationService_GetUser2 --> SendFailureEmail
+    SendFailureEmail --> LogError
+    LogError --> ParticipationService_UpsertPdswFinal
+    ParticipationService_UpsertPdswFinal --> RethrowException
+    RethrowException --> End
+
+    classDef hangfire fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#111;
+    classDef participation fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#111;
+    classDef dataloader fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#111;
+    classDef filegeneration fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#111;
+    classDef signalr fill:#e0f7fa,stroke:#00838f,stroke-width:2px,color:#111;
+    classDef email fill:#fce4ec,stroke:#ad1457,stroke-width:2px,color:#111;
+    classDef exception fill:#fbe9e7,stroke:#d84315,stroke-width:2px,color:#111;
+    classDef logging fill:#efebe9,stroke:#4e342e,stroke-width:2px,color:#111;
+    classDef action fill:#f1f8e9,stroke:#558b2f,stroke-width:2px,color:#111;
+    classDef decision fill:#fffde7,stroke:#fbc02d,stroke-width:3px,color:#111;
+    classDef startend fill:#b2dfdb,stroke:#00695c,stroke-width:3px,color:#111;
+    classDef detaillink fill:#fff9c4,stroke:#f57f00,stroke-width:2px,stroke-dasharray: 5 5,color:#111;
