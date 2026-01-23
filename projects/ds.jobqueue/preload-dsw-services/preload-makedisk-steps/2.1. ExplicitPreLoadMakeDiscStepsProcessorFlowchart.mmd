@@ -1,9 +1,12 @@
 flowchart LR
     %% Nodes
     Start(["Start"]):::start
-    OrderSteps["Order Steps: preLoadMakeDiscSteps.OrderBy(StepId)"]:::action
+    OrderSteps["PreLoadMakeDiscSteps: OrderBy(StepId)"]:::step
+    GetInitStep["PreLoadMakeDiscSteps: Get Step1 - InitializeStep"]:::step
+    RunInitStep["PreLoadMakeDiscStep: RunAsync(state) (Step1)\n(Note: Step updates state)"]:::action
+    CheckValid{state.Result.CodeType\n== Valid?}:::decision
     StepsTB["Steps"]:::stepslist
-    Step1["Step1: InitializeStep"]:::step
+    Step1["Step1: InitializeStep (excluded)"]:::stepExcluded
     Step2["Step2: AddOrUpdateParticipationWorkbookStep"]:::step
     Step3["Step3: FileLevelCheckStep"]:::step
     Step4["Step4: SubmissionLevelCheckStep"]:::step
@@ -11,6 +14,7 @@ flowchart LR
     Step6["Step6: QueueMakeDiscByPassAscentManualSubmissionStep"]:::step
     Step7["Step7: QueueMakeDiscValidWorkSheetManualSubmissionStep"]:::step
     Step8["Step8: ProcessVersionsStep"]:::step
+    CheckSkip{state.SkipStep\n== step.StepId?}:::decision
     RunStep["RunStep"]:::runStep
     End(["End"]):::endfinal
     Exception["Exception Occurred"]:::exception
@@ -21,7 +25,9 @@ flowchart LR
     SetErrorDesc["Set state.Result.ErrorDescription"]:::action
 
     %% Main flow
-    Start --> OrderSteps --> StepsTB
+    Start --> OrderSteps --> GetInitStep --> RunInitStep --> CheckValid
+    CheckValid -- Yes --> StepsTB
+    CheckValid -- No --> GetValidation
     StepsTB -.- Step1
     StepsTB -.- Step2
     StepsTB -.- Step3
@@ -30,15 +36,17 @@ flowchart LR
     StepsTB -.- Step6
     StepsTB -.- Step7
     StepsTB -.- Step8
-    Step1 -.- RunStep
-    Step2 -.- RunStep
-    Step3 -.- RunStep
-    Step4 -.- RunStep
-    Step5 -.- RunStep
-    Step6 -.- RunStep
-    Step7 -.- RunStep
-    Step8 -.- RunStep
+    Step1 -.- CheckSkip
+    Step2 -.- CheckSkip
+    Step3 -.- CheckSkip
+    Step4 -.- CheckSkip
+    Step5 -.- CheckSkip
+    Step6 -.- CheckSkip
+    Step7 -.- CheckSkip
+    Step8 -.- CheckSkip
     
+    CheckSkip -- No (Run) --> RunStep
+    CheckSkip -- Yes (Skip) --> StepsTB
     RunStep --> BreakStep    
     BreakStep{state.BreakStep?}:::decision
     BreakStep -- Yes --> GetValidation
@@ -55,6 +63,7 @@ flowchart LR
     classDef action fill:#fffbe6,stroke:#ffb300,stroke-width:2px,color:#665200;
     classDef stepslist fill:#f3e8ff,stroke:#6c63ff,stroke-width:2px,color:#2d186c,font-weight:bold;
     classDef step fill:#fff6e6,stroke:#b7950b,stroke-width:2px,stroke-dasharray: 5 5,color:#665200;
+    classDef stepExcluded fill:#f8d7da,stroke:#d9534f,stroke-width:2px,stroke-dasharray: 5 5,color:#7a2323;
     classDef service fill:#ffe0e6,stroke:#e75480,stroke-width:2px,color:#7a2941;
     classDef decision fill:#f3e8ff,stroke:#6c63ff,stroke-width:2px,color:#2d186c,font-weight:bold;
     classDef exception fill:#f8d7da,stroke:#d9534f,stroke-width:2px,stroke-dasharray: 5 5,color:#7a2323;
@@ -62,9 +71,12 @@ flowchart LR
     classDef manual fill:#fbeee6,stroke:#e67e22,stroke-width:2px,stroke-dasharray: 5 5,color:#7a4a0a;
     class Start start;
     class End endfinal;
-    class OrderSteps,SetErrorDesc,SetManual action;
+    class RunInitStep,SetErrorDesc,SetManual action;
     class StepsTB stepslist;
-    class Step1,Step2,Step3,Step4,Step5,Step6,Step7,Step8,RunManualStep step;
+    class OrderSteps,GetInitStep step;
+    class Step1 stepExcluded;
+    class Step2,Step3,Step4,Step5,Step6,Step7,Step8,RunManualStep step;
     class GetValidation service;
     class Exception exception;
     class LogError logger;
+    class BreakStep,CheckValid,CheckSkip decision;
