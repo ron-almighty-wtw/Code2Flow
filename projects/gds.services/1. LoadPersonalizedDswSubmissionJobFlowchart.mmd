@@ -72,13 +72,14 @@ flowchart LR
     InvalidExcess{Has invalid or excess countries?}:::decision
     InvalidExcess -- Yes  --> DataLoaderService_UpsertQueueDetail -- Yes --> PersonalizedInvalidExcessManager_CreateParticipations
     PersonalizedInvalidExcessManager_CreateParticipations --> GenerateEmailJobManager_EnqueueEmail
+    PersonalizedInvalidExcessManager_CreateParticipations -.-> SeeInvalidExcessFlow["see: 2. PersonalizedInvalidExcessManagerFlowchart.mmd"]:::action
     GenerateEmailJobManager_EnqueueEmail --> End
 
     InvalidExcess -- No --> DataLoaderService_UpsertQueueDetail -- No --> ForEachParticipation["For each participation/country"]:::loop
     ForEachParticipation --> parCountry
     parCountry --> LoadSubmissionJobManager_EnqueuePersonalizedParticipationProcessing
     %% All per-country jobs complete, then continue
-    ForEachParticipation --> LoadSubmissionJobManager_UpdateRVQJob
+    ForEachParticipation -- loop completed --> LoadSubmissionJobManager_UpdateRVQJob
     LoadSubmissionJobManager_UpdateRVQJob --> SignalRService_NotifySignalR
     SignalRService_NotifySignalR --> GenerateEmailJobManager_EnqueueEmail
     GenerateEmailJobManager_EnqueueEmail --> End
@@ -96,3 +97,8 @@ flowchart LR
     classDef decision fill:#fffde7,stroke:#fbc02d,stroke-width:3px,color:#111;
     classDef startend fill:#b2dfdb,stroke:#00695c,stroke-width:3px,color:#111;
     classDef loop fill:#ffe082,stroke:#fbc02d,stroke-width:2px,color:#111;
+    
+    style parFetch0Start fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parCountry fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parFetch0End fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style SeeInvalidExcessFlow fill:#000,stroke:#fff,stroke-width:2px,color:#fff

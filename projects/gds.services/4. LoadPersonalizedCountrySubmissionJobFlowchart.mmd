@@ -61,6 +61,7 @@ flowchart LR
     UpdateParticipationSubmissionId --> MergeWorksheets["Merge Worksheets"]:::action
     MergeWorksheets --> ValidateCountrySubmission["ValidateCountrySubmissionQueueManager: ValidateCountrySubmissionAsync"]:::validation
     ValidateCountrySubmission --> End
+    ValidateCountrySubmission -.-> SeeDetailedFlow["see: 5. ValidateCountrySubmissionFlowchart.mmd"]:::action
 
     %% Exception handling flow
     Start -. Exception .-> ExceptionEvent
@@ -77,4 +78,10 @@ flowchart LR
     classDef action fill:#b3e5fc,stroke:#0288d1,stroke-width:2px,color:#111;
     classDef decision fill:#ffe0b2,stroke:#f57c00,stroke-width:2px,color:#111;
     classDef email fill:#fce4ec,stroke:#ad1457,stroke-width:2px,color:#111;
+    
+    style parFetch0 fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parFetch1 fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parFetch2 fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parFetch3 fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style SeeDetailedFlow fill:#000,stroke:#fff,stroke-width:2px,color:#fff
     class Start,End startend;

@@ -36,6 +36,8 @@ flowchart LR
     CheckIsXLProcess -- No --> EnqueueNormalJob["Enqueue ILoadPersonalizedCountrySubmissionJob.ProcessAsync"]:::action
     EnqueueXLJob --> End
     EnqueueNormalJob --> End
+    EnqueueXLJob -.-> SeeLoadPersonalizedFlow["see: 4. LoadPersonalizedCountrySubmissionJobFlowchart.mmd"]:::action
+    EnqueueNormalJob -.-> SeeLoadPersonalizedFlow
 
     CheckValidationCode -- No --> ValidationCodeHasLargeIncumbent{"ValidationCode Has Large Incumbent?"}:::decision
     ValidationCodeHasLargeIncumbent -- Yes --> GetValidationLookup["DataLoaderService: GetValidationLookupAsync (HasLargeMegaIncumbents)"]:::dataloader
@@ -89,3 +91,8 @@ flowchart LR
     classDef decision fill:#ffe0b2,stroke:#f57c00,stroke-width:2px,color:#111;
     classDef legend fill:#fff,stroke:#888,stroke-width:1px,color:#111;
     class Start,End startend;
+    
+    style parFetch0 fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parActions fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parFetch1 fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style SeeLoadPersonalizedFlow fill:#000,stroke:#fff,stroke-width:2px,color:#fff

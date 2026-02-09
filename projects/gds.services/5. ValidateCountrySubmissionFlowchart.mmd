@@ -1,0 +1,98 @@
+flowchart LR
+
+    Start(["Start: ValidateCountrySubmissionAsync(request)"]):::startend
+    parFetchStart(( )):::action
+    parFetchEnd(( )):::action
+
+    SurveySetupService_GetVersionTransfer["SurveySetupService: Get version transfer"]:::survey
+    FilterWorksheets["Filter worksheets to validate"]:::process
+    GenerateDqRequestId["Generate DQ request identifier"]:::process
+    FeatureManagement_GetFeatureFlag["FeatureManagement: Get EnableValidationByBatch flag"]:::feature
+
+    %% Batch Validation Path
+    EnqueueCountrySubmissionValidation["EnqueueCountrySubmissionValidationAsync"]:::batch
+    DataLoaderService_GetIncumbentGrantCount["DataLoaderService: Get incumbent/grant count"]:::dataloader
+    DetermineXLProcess["Determine if XL process (> threshold)"]:::process
+    CreateBatchJob["Create Hangfire Batch Job"]:::batch
+    EnqueueStandardWorksheets["Enqueue validation: Company, Contact, Unit, CompanyData, CompanyPlan"]:::batch
+    EnqueueIncumbentBatches["For each Incumbent batch: Enqueue validation job"]:::loop
+    EnqueueGrantBatches["For each Grant batch: Enqueue validation job"]:::loop
+    FinalizeValidation["Continue batch with: FinalizeValidationResultAsync"]:::batch
+
+    %% Non-Batch Validation Path
+    TransferCompanyPlanManager_GetPlanCodeSuffixes["TransferCompanyPlanManager: Get plan code suffixes"]:::transfer
+    BuildCountryPlanCodeDic["Build country plan code dictionary"]:::process
+    GenerateRequestId["Generate request identifier"]:::process
+    CheckMultipleIncumbent["Check if has multiple incumbent tabs"]:::process
+    InitializeCounters["Initialize worksheet counters"]:::process
+    ForEachWorksheet["For each worksheet"]:::loop
+    BuildDqRequest["Build SubmissionDataQualityRequestDTO"]:::process
+    WorksheetDataQualityManager_ValidateWorksheet["WorksheetDataQualityManager: Validate submission worksheet"]:::quality
+    AccumulateResults["Accumulate validation results (unicode, errors, counts)"]:::process
+    BuildDetails["Build LoadSubmissionParticipationDetailsDTO"]:::process
+    DataLoaderService_UpdateParticipation["DataLoaderService: Update LoadSubmissionQueueParticipation"]:::dataloader
+    BuildParticipationTracking["Build ParticipationTrackingDTO"]:::process
+    DataLoaderService_UpsertResubmission["DataLoaderService: Upsert resubmission status"]:::dataloader
+    LoadSubmissionJobManager_TransferSubmissions["LoadSubmissionJobManager: Enqueue TransferSubmissionJob"]:::loadsubmission
+
+    End(["End"]):::startend
+
+    %% Main flow
+    Start --> parFetchStart
+    parFetchStart --> SurveySetupService_GetVersionTransfer
+    parFetchStart --> FilterWorksheets
+    parFetchStart --> GenerateDqRequestId
+    
+    SurveySetupService_GetVersionTransfer --> parFetchEnd
+    FilterWorksheets --> parFetchEnd
+    GenerateDqRequestId --> parFetchEnd
+    
+    parFetchEnd --> FeatureManagement_GetFeatureFlag
+    FeatureManagement_GetFeatureFlag --> BatchEnabled{Batch validation enabled?}:::decision
+
+    %% Batch Path
+    BatchEnabled -- Yes --> EnqueueCountrySubmissionValidation
+    EnqueueCountrySubmissionValidation --> DataLoaderService_GetIncumbentGrantCount
+    DataLoaderService_GetIncumbentGrantCount --> DetermineXLProcess
+    DetermineXLProcess --> CreateBatchJob
+    CreateBatchJob --> EnqueueStandardWorksheets
+    EnqueueStandardWorksheets --> EnqueueIncumbentBatches
+    EnqueueIncumbentBatches --> EnqueueGrantBatches
+    EnqueueGrantBatches --> FinalizeValidation
+    FinalizeValidation --> End
+
+    %% Non-Batch Path
+    BatchEnabled -- No --> TransferCompanyPlanManager_GetPlanCodeSuffixes
+    TransferCompanyPlanManager_GetPlanCodeSuffixes --> BuildCountryPlanCodeDic
+    BuildCountryPlanCodeDic --> GenerateRequestId
+    GenerateRequestId --> CheckMultipleIncumbent
+    CheckMultipleIncumbent --> InitializeCounters
+    InitializeCounters --> ForEachWorksheet
+    ForEachWorksheet --> BuildDqRequest
+    BuildDqRequest --> WorksheetDataQualityManager_ValidateWorksheet
+    WorksheetDataQualityManager_ValidateWorksheet --> AccumulateResults
+    AccumulateResults --> ForEachWorksheet
+    ForEachWorksheet -- loop completed --> BuildDetails
+    BuildDetails --> DataLoaderService_UpdateParticipation
+    DataLoaderService_UpdateParticipation --> BuildParticipationTracking
+    BuildParticipationTracking --> DataLoaderService_UpsertResubmission
+    DataLoaderService_UpsertResubmission --> LoadSubmissionJobManager_TransferSubmissions
+    LoadSubmissionJobManager_TransferSubmissions --> End
+    LoadSubmissionJobManager_TransferSubmissions -.-> SeeTransferFlow["see: 6. TransferSubmissionJobFlowchart.mmd"]:::action
+
+    classDef dataloader fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#111;
+    classDef transfer fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#111;
+    classDef survey fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#111;
+    classDef quality fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#111;
+    classDef batch fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#111;
+    classDef loadsubmission fill:#f9fbe7,stroke:#afb42b,stroke-width:2px,color:#111;
+    classDef feature fill:#e0f7fa,stroke:#00838f,stroke-width:2px,color:#111;
+    classDef process fill:#f5f5f5,stroke:#616161,stroke-width:2px,color:#111;
+    classDef decision fill:#fffde7,stroke:#fbc02d,stroke-width:3px,color:#111;
+    classDef startend fill:#b2dfdb,stroke:#00695c,stroke-width:3px,color:#111;
+    classDef loop fill:#ffe082,stroke:#fbc02d,stroke-width:2px,color:#111;
+    classDef action fill:#fff,stroke:#999,stroke-width:1px,color:#111;
+    
+    style parFetchStart fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parFetchEnd fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style SeeTransferFlow fill:#000,stroke:#fff,stroke-width:2px,color:#fff

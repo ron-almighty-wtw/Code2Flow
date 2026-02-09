@@ -1,0 +1,115 @@
+flowchart LR
+
+    Start(["Start: ProcessInternalAsync(loadId)"]):::startend
+    parTransfer1Start(( )):::action
+    parTransfer1End(( )):::action
+    parTransfer2Start(( )):::action
+    parTransfer2End(( )):::action
+    parFinalStart(( )):::action
+    parFinalEnd(( )):::action
+
+    DataLoaderService_GetQueueParticipation["DataLoaderService: Get LoadSubmissionQueueParticipation"]:::dataloader
+    CheckQueueParticipationExists{Queue participation exists?}:::decision
+    ThrowNotExists["Throw Exception: LoadId does not exist"]:::exception
+    LoadSubmissionQueueParticipationManager_HasExistingData["LoadSubmissionQueueParticipationManager: Check has existing submission data"]:::loadsubmission
+    HasExistingData{Has existing submission data?}:::decision
+    ThrowDuplicateData["Throw DataAlreadyExistsException"]:::exception
+    JobHelper_IsProxySubmission["JobHelper: Check if proxy submission"]:::jobhelper
+    BuildTransferRequest["Build TransferSubmissionRequestDTO"]:::process
+    DataLoaderService_TransferCompanyAndData["DataLoaderService: Transfer submission company and company data"]:::dataloader
+    JobGradeCalculationManager_Calculate["JobGradeCalculationManager: Calculate and save"]:::calculation
+    DataLoaderService_TransferUnit["DataLoaderService: Transfer submission unit"]:::dataloader
+    DataLoaderService_TransferContact["DataLoaderService: Transfer submission contact"]:::dataloader
+    TransferCompanyPlanManager_Transfer["TransferCompanyPlanManager: Transfer from stage to main"]:::transfer
+    CheckBatchTransferEnabled{Batch transfer enabled?}:::decision
+    DataLoaderService_TransferIncumbentByBatch["DataLoaderService: Transfer submission incumbent by batch"]:::dataloader
+    DataLoaderService_TransferGrantByBatch["DataLoaderService: Transfer submission grant by batch"]:::dataloader
+    DataLoaderService_TransferIncumbent["DataLoaderService: Transfer submission incumbent"]:::dataloader
+    DataLoaderService_TransferGrant["DataLoaderService: Transfer submission grant"]:::dataloader
+    UpdateQueueParticipation["Update LSQP: Set transfer status and load status"]:::process
+    DataLoaderService_UpdateQueueParticipation["DataLoaderService: Update LoadSubmissionQueueParticipation"]:::dataloader
+    DataLoaderService_UpdateLoadStatus["DataLoaderService: Update submission company load status"]:::dataloader
+    DataLoaderService_GetQueueDetail["DataLoaderService: Get queue detail"]:::dataloader
+    EnqueueParticipationJob["BackgroundJob: Enqueue ParticipationJob"]:::job
+    CheckQueueParticipationNull{Queue participation != null?}:::decision
+
+    End(["End"]):::startend
+
+    %% Exception handling paths
+    CatchDataAlreadyExists["Catch DataAlreadyExistsException: Set error message"]:::exception
+    CatchGeneralException["Catch Exception: Set hasTransferError"]:::exception
+    FinallyBlock["Finally Block"]:::process
+
+    %% Main flow
+    Start --> DataLoaderService_GetQueueParticipation
+    DataLoaderService_GetQueueParticipation --> CheckQueueParticipationExists
+    CheckQueueParticipationExists -- No --> ThrowNotExists
+    ThrowNotExists --> CatchGeneralException
+    CheckQueueParticipationExists -- Yes --> LoadSubmissionQueueParticipationManager_HasExistingData
+    LoadSubmissionQueueParticipationManager_HasExistingData --> HasExistingData
+    HasExistingData -- Yes --> ThrowDuplicateData
+    ThrowDuplicateData --> CatchDataAlreadyExists
+    CatchDataAlreadyExists --> FinallyBlock
+    CatchGeneralException --> FinallyBlock
+    HasExistingData -- No --> JobHelper_IsProxySubmission
+    JobHelper_IsProxySubmission --> BuildTransferRequest
+    BuildTransferRequest --> DataLoaderService_TransferCompanyAndData
+    DataLoaderService_TransferCompanyAndData --> JobGradeCalculationManager_Calculate
+
+    %% Parallel transfer 1: Unit, Contact, CompanyPlan
+    JobGradeCalculationManager_Calculate --> parTransfer1Start
+    parTransfer1Start --> DataLoaderService_TransferUnit
+    parTransfer1Start --> DataLoaderService_TransferContact
+    parTransfer1Start --> TransferCompanyPlanManager_Transfer
+    DataLoaderService_TransferUnit --> parTransfer1End
+    DataLoaderService_TransferContact --> parTransfer1End
+    TransferCompanyPlanManager_Transfer --> parTransfer1End
+
+    %% Decision for batch or regular transfer
+    parTransfer1End --> CheckBatchTransferEnabled
+
+    %% Parallel transfer 2a: Incumbent and Grant (Batch)
+    CheckBatchTransferEnabled -- Yes --> parTransfer2Start
+    parTransfer2Start --> DataLoaderService_TransferIncumbentByBatch
+    parTransfer2Start --> DataLoaderService_TransferGrantByBatch
+    DataLoaderService_TransferIncumbentByBatch --> parTransfer2End
+    DataLoaderService_TransferGrantByBatch --> parTransfer2End
+
+    %% Parallel transfer 2b: Incumbent and Grant (Regular)
+    CheckBatchTransferEnabled -- No --> DataLoaderService_TransferIncumbent
+    CheckBatchTransferEnabled -- No --> DataLoaderService_TransferGrant
+    DataLoaderService_TransferIncumbent --> FinallyBlock
+    DataLoaderService_TransferGrant --> FinallyBlock
+    parTransfer2End --> FinallyBlock
+
+    %% Finally block
+    FinallyBlock --> CheckQueueParticipationNull{Queue participation != null?}:::decision
+    CheckQueueParticipationNull -- No --> End
+    CheckQueueParticipationNull -- Yes --> UpdateQueueParticipation
+    UpdateQueueParticipation --> parFinalStart
+    parFinalStart --> DataLoaderService_UpdateQueueParticipation
+    parFinalStart --> DataLoaderService_UpdateLoadStatus
+    DataLoaderService_UpdateQueueParticipation --> parFinalEnd
+    DataLoaderService_UpdateLoadStatus --> parFinalEnd
+    parFinalEnd --> DataLoaderService_GetQueueDetail
+    DataLoaderService_GetQueueDetail --> EnqueueParticipationJob
+    EnqueueParticipationJob --> End
+
+    classDef dataloader fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#111;
+    classDef transfer fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#111;
+    classDef loadsubmission fill:#f9fbe7,stroke:#afb42b,stroke-width:2px,color:#111;
+    classDef calculation fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#111;
+    classDef jobhelper fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#111;
+    classDef job fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px,color:#111;
+    classDef exception fill:#fbe9e7,stroke:#d84315,stroke-width:2px,color:#111;
+    classDef process fill:#f5f5f5,stroke:#616161,stroke-width:2px,color:#111;
+    classDef decision fill:#fffde7,stroke:#fbc02d,stroke-width:3px,color:#111;
+    classDef startend fill:#b2dfdb,stroke:#00695c,stroke-width:3px,color:#111;
+    classDef action fill:#fff,stroke:#999,stroke-width:1px,color:#111;
+    
+    style parTransfer1Start fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parTransfer1End fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parTransfer2Start fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parTransfer2End fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parFinalStart fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parFinalEnd fill:#000,stroke:#fff,stroke-width:2px,color:#fff

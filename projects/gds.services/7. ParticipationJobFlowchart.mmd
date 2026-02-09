@@ -1,0 +1,193 @@
+flowchart TB
+
+    Start(["Start: ProcessAsync(queueId, loadId, correlationId, hasTransferError, isProxySubmission)"]):::startend
+    parInitialFetchStart(( )):::action
+    parInitialFetchEnd(( )):::action
+    parOrgProfileStart(( )):::action
+    parOrgProfileEnd(( )):::action
+    parFinalTasksStart(( )):::action
+    parFinalTasksEnd(( )):::action
+
+    SetProxySubmission["Set _isProxySubmission flag"]:::process
+    CheckTransferError{Has transfer error?}:::decision
+    ProcessInternal["ProcessInternalAsync"]:::process
+    ProcessFailed["ProcessFailedInternalAsync"]:::process
+
+    %% ProcessInternalAsync nodes
+    IsPlaceHolderData["Check if placeholder data"]:::dataloader
+    DataLoaderService_GetQueue["DataLoaderService: Get LoadSubmissionQueue"]:::dataloader
+    DataLoaderService_GetQueueParticipation["DataLoaderService: Get LoadSubmissionQueueParticipation"]:::dataloader
+    DataLoaderService_GetQueueValidations["DataLoaderService: Get queue validations"]:::dataloader
+    DataLoaderService_GetQueueDetail["DataLoaderService: Get queue detail"]:::dataloader
+    HasValidationErrors{Has validation errors or unicode?}:::decision
+    SetProvisionalStatus["Set LoadStatus = ProvisionallyLoaded"]:::process
+    SetLoadedStatus["Set LoadStatus = Loaded"]:::process
+    CheckProxyForProvisional{Is proxy submission?}:::decision
+    DataLoaderService_GetVersionWorkflow["DataLoaderService: Get version workflow"]:::dataloader
+    ParticipationService_GetDataProvider["ParticipationService: Get data provider user"]:::participation
+    DetermineParticipationStatus["Determine participation status based on workflow/validations"]:::process
+    CheckOnlineEditorEnabled{Participation = Provisional AND OE enabled AND standard DSW?}:::decision
+    LoadSubmissionQueueParticipationManager_HasOEData["LoadSubmissionQueueParticipationManager: Check has existing OE data"]:::loadsubmission
+    HasOEData{Has OE data?}:::decision
+    ThrowOEDuplicateData["Throw DataAlreadyExistsException: OE duplicate"]:::exception
+    CheckSecondaryIncumbent{Is secondary incumbent version?}:::decision
+    OnlineEditor_Populate["OnlineEditor: Populate online editor"]:::editor
+    OnlineEditor_PopulateSecondary["OnlineEditor: Populate OE for secondary submission"]:::editor
+    DataLoaderService_PopulateEditorValidation["DataLoaderService: Populate editor validation error"]:::dataloader
+    FormatSpmNote["Format SPM note with validation codes"]:::process
+    ParticipationService_AddCustomerHistory["ParticipationService: Add customer history"]:::participation
+    SetParticipantStatus["Set ParticipationStatus = Participant"]:::process
+    CheckUseOrgProfile{"Use OrgProfile AND queued by ISP/ISP_OE/RVQ?"}:::decision
+    SurveySetupService_GetVersionElements["SurveySetupService: Get non-exported version elements"]:::survey
+    OrganizationManager_SyncOrgData["OrganizationProfileSyncManager: Sync organization data to OP"]:::organization
+    OrganizationContactManager_GetSyncData["OrganizationContactManager: Get sync data"]:::organization
+    OrganizationContactManager_SyncData["OrganizationContactManager: Sync contacts to OP"]:::organization
+    TransitionProvisionalJob["Schedule TransitionProvisionalToParticipantJob"]:::job
+    CreateSubmissionReminderJob["Schedule SubmissionReminderJob"]:::job
+    LoadSubmissionQueueParticipationManager_Update["LoadSubmissionQueueParticipationManager: Update participation"]:::loadsubmission
+    IsAnyLoadInProgress["Check if any load in progress"]:::dataloader
+    IsLastLoad{Is last load process?}:::decision
+    CheckIsProxy{Is proxy submission?}:::decision
+    GenerateProxyErrorLog["Generate proxy submission error log file"]:::process
+    GenerateEmailJobManager_Enqueue["GenerateEmailJobManager: Enqueue email job"]:::email
+    PostSubmissionJobManager_Enqueue["PostSubmissionJobManager: Enqueue post submission job"]:::postsubmission
+    TrackSubmissionLoadedEvent["Track submission loaded event"]:::process
+    CheckParticipantStatus{Participation status = Participant?}:::decision
+    UpdateRemainingInvalid["Update remaining invalid to participant"]:::loadsubmission
+    NonPriorityPdswIndustryManager_Process["NonPriorityPdswIndustryManager: Process"]:::process
+
+    %% ProcessFailedInternalAsync nodes
+    DataLoaderService_GetQueueParticipationFailed["DataLoaderService: Get LoadSubmissionQueueParticipation"]:::dataloader
+    DataLoaderService_GetQueueFailed["DataLoaderService: Get LoadSubmissionQueue"]:::dataloader
+    BuildFailedParticipation["Build LoadSubmissionParticipationDTO (LoadStatus = Failed)"]:::process
+    LoadSubmissionQueueParticipationManager_UpdateFailed["LoadSubmissionQueueParticipationManager: Update participation"]:::loadsubmission
+    GenerateEmailJobManager_EnqueueFailed["GenerateEmailJobManager: Enqueue email job"]:::email
+
+    %% Exception handling
+    CatchDataAlreadyExists["Catch DataAlreadyExistsException"]:::exception
+    CatchGeneralException["Catch Exception"]:::exception
+   
+    End(["End"]):::startend
+
+    %% Main flow
+    Start --> SetProxySubmission
+    SetProxySubmission --> CheckTransferError
+    CheckTransferError -- No --> ProcessInternal
+    CheckTransferError -- Yes --> ProcessFailed
+
+    %% ProcessInternalAsync flow
+    ProcessInternal --> parInitialFetchStart
+    parInitialFetchStart --> IsPlaceHolderData
+    parInitialFetchStart --> DataLoaderService_GetQueue
+    parInitialFetchStart --> DataLoaderService_GetQueueParticipation
+    parInitialFetchStart --> DataLoaderService_GetQueueValidations
+    parInitialFetchStart --> DataLoaderService_GetQueueDetail
+    IsPlaceHolderData --> parInitialFetchEnd
+    DataLoaderService_GetQueue --> parInitialFetchEnd
+    DataLoaderService_GetQueueParticipation --> parInitialFetchEnd
+    DataLoaderService_GetQueueValidations --> parInitialFetchEnd
+    DataLoaderService_GetQueueDetail --> parInitialFetchEnd
+
+    parInitialFetchEnd --> HasValidationErrors
+    HasValidationErrors -- Yes --> SetProvisionalStatus
+    HasValidationErrors -- No --> SetLoadedStatus
+    
+    SetProvisionalStatus --> CheckProxyForProvisional
+    CheckProxyForProvisional -- Yes --> SetParticipantStatus
+    CheckProxyForProvisional -- No --> DataLoaderService_GetVersionWorkflow
+    
+    DataLoaderService_GetVersionWorkflow --> ParticipationService_GetDataProvider
+    ParticipationService_GetDataProvider --> DetermineParticipationStatus
+    DetermineParticipationStatus --> CheckOnlineEditorEnabled
+    
+    CheckOnlineEditorEnabled -- Yes --> LoadSubmissionQueueParticipationManager_HasOEData
+    LoadSubmissionQueueParticipationManager_HasOEData --> HasOEData
+    HasOEData -- Yes --> ThrowOEDuplicateData
+    
+    HasOEData -- No --> CheckSecondaryIncumbent
+    CheckSecondaryIncumbent -- No --> OnlineEditor_Populate
+    CheckSecondaryIncumbent -- Yes --> OnlineEditor_PopulateSecondary
+    OnlineEditor_Populate --> DataLoaderService_PopulateEditorValidation
+    OnlineEditor_PopulateSecondary --> DataLoaderService_PopulateEditorValidation
+    DataLoaderService_PopulateEditorValidation --> FormatSpmNote
+    CheckOnlineEditorEnabled -- No --> FormatSpmNote
+    
+    FormatSpmNote --> ParticipationService_AddCustomerHistory
+    ParticipationService_AddCustomerHistory --> CheckUseOrgProfile
+    
+    SetLoadedStatus --> SetParticipantStatus
+    SetParticipantStatus --> CheckUseOrgProfile
+    
+    CheckUseOrgProfile -- Yes --> SurveySetupService_GetVersionElements
+    SurveySetupService_GetVersionElements --> OrganizationContactManager_GetSyncData
+    OrganizationContactManager_GetSyncData --> parOrgProfileStart
+    parOrgProfileStart --> OrganizationManager_SyncOrgData
+    parOrgProfileStart --> OrganizationContactManager_SyncData
+    
+    OrganizationManager_SyncOrgData --> parOrgProfileEnd
+    OrganizationContactManager_SyncData --> parOrgProfileEnd
+    parOrgProfileEnd --> TransitionProvisionalJob
+    CheckUseOrgProfile -- No --> TransitionProvisionalJob
+    
+    TransitionProvisionalJob --> CreateSubmissionReminderJob
+    CreateSubmissionReminderJob --> LoadSubmissionQueueParticipationManager_Update
+    LoadSubmissionQueueParticipationManager_Update --> IsAnyLoadInProgress
+    IsAnyLoadInProgress --> parFinalTasksStart 
+    
+    parFinalTasksStart --> IsLastLoad
+    parFinalTasksStart --> CheckIsProxy
+  
+    CheckIsProxy -- Yes --> GenerateProxyErrorLog
+    CheckIsProxy -- No --> GenerateEmailJobManager_Enqueue
+  
+    IsLastLoad -- Yes --> PostSubmissionJobManager_Enqueue
+    IsLastLoad -- No --> parFinalTasksEnd
+
+    PostSubmissionJobManager_Enqueue --> parFinalTasksEnd
+   
+    
+    GenerateProxyErrorLog --> parFinalTasksEnd
+    GenerateEmailJobManager_Enqueue --> parFinalTasksEnd
+    
+    parFinalTasksEnd --> TrackSubmissionLoadedEvent
+    TrackSubmissionLoadedEvent --> CheckParticipantStatus
+    CheckParticipantStatus -- Yes --> UpdateRemainingInvalid
+    CheckParticipantStatus -- No --> NonPriorityPdswIndustryManager_Process
+    UpdateRemainingInvalid --> NonPriorityPdswIndustryManager_Process
+    NonPriorityPdswIndustryManager_Process --> End
+
+    %% ProcessFailedInternalAsync flow
+    ProcessFailed --> DataLoaderService_GetQueueParticipationFailed
+    DataLoaderService_GetQueueParticipationFailed --> DataLoaderService_GetQueueFailed
+    DataLoaderService_GetQueueFailed --> BuildFailedParticipation
+    BuildFailedParticipation --> LoadSubmissionQueueParticipationManager_UpdateFailed
+    LoadSubmissionQueueParticipationManager_UpdateFailed --> GenerateEmailJobManager_EnqueueFailed
+    GenerateEmailJobManager_EnqueueFailed --> End
+
+    %% Exception handling
+    CatchDataAlreadyExists --> ProcessFailed
+    CatchGeneralException --> ProcessFailed
+    ProcessInternal -. DataAlreadyExistsException .-> CatchDataAlreadyExists
+    ProcessInternal -. General Exception .-> CatchGeneralException
+
+    classDef dataloader fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#111;
+    classDef participation fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#111;
+    classDef survey fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#111;
+    classDef loadsubmission fill:#f9fbe7,stroke:#afb42b,stroke-width:2px,color:#111;
+    classDef editor fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#111;
+    classDef organization fill:#fce4ec,stroke:#ad1457,stroke-width:2px,color:#111;
+    classDef job fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px,color:#111;
+    classDef email fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#111;
+    classDef postsubmission fill:#e0f2f1,stroke:#00796b,stroke-width:2px,color:#111;
+    classDef exception fill:#fbe9e7,stroke:#d84315,stroke-width:2px,color:#111;
+    classDef process fill:#f5f5f5,stroke:#616161,stroke-width:2px,color:#111;
+    classDef decision fill:#fffde7,stroke:#fbc02d,stroke-width:3px,color:#111;
+    classDef startend fill:#b2dfdb,stroke:#00695c,stroke-width:3px,color:#111;
+    classDef action fill:#fff,stroke:#999,stroke-width:1px,color:#111;
+    
+    style parInitialFetchStart fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parInitialFetchEnd fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parOrgProfileStart fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parOrgProfileEnd fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parFinalTasksStart fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parFinalTasksEnd fill:#000,stroke:#fff,stroke-width:2px,color:#fff

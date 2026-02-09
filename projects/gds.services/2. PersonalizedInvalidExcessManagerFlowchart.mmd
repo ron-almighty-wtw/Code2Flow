@@ -27,6 +27,7 @@ flowchart LR
     ForEachParticipation["For each participation in Personalized DSW"]:::loop
     parFetch1(( )):::action
     parFetch2(( )):::action
+    parFetch2End(( )):::action
     parActions(( )):::action
     parActionsEnd(( )):::action
     LSQPRecordsCreated{Any LSQP records created?}:::decision
@@ -48,10 +49,11 @@ flowchart LR
     parFetch2 --> GetVersionDetails
     parFetch2 --> GetParticipation
     parFetch2 --> GetParticipationUser
-    GetVersionDetails --> GetParticipation
-    GetParticipation --> GetParticipationUser
-        GetParticipationUser --> LSQPCondition
-        LSQPCondition{"isNeitherParticipantNorProvisional OR isParticipantWithReceivedRVQ?"}:::decision
+    GetVersionDetails --> parFetch2End
+    GetParticipation --> parFetch2End
+    GetParticipationUser --> parFetch2End
+    parFetch2End --> LSQPCondition
+        LSQPCondition{"isNotParticipant OR isParticipantWithReceivedRVQ?"}:::decision
         LSQPCondition -- Yes --> CreateLSQP
         LSQPCondition -- No --> ForEachParticipation
         CreateLSQP --> ManageParticipation
@@ -82,3 +84,10 @@ flowchart LR
     classDef legend fill:#fff,stroke:#888,stroke-width:1px,color:#111;
     class Legend1 legend;
     class Start,End startend;
+    
+    style parFetch0 fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parFetch1 fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parFetch2 fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parFetch2End fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parActions fill:#000,stroke:#fff,stroke-width:2px,color:#fff
+    style parActionsEnd fill:#000,stroke:#fff,stroke-width:2px,color:#fff
